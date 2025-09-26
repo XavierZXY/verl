@@ -1,0 +1,6 @@
+input = "/home/zxy/codes/working/RL/DeepEyes/data/train/train.jsonl"
+root = "/data1/huggingface/hub/datasets--XimiaoZhang--MVTec-2K/snapshots/d52ff40b834d44cfcbea1fafc204666fc0da5b18"
+# root = "/media/4TBNVME/datasets/MVTec-2k"
+output = "/home/zxy/codes/working/RL/DeepEyes/data/train/train_dataset.parquet"
+format = "parquet"                                                              # or "jsonl"
+limit = 0                                                                       # use 0 or remove the key for no limit; any positive int to cap

@@ -1,0 +1,14 @@
+input = "upload_data/VisA/test/test.jsonl"
+
+# Root directory for images (relative paths in JSONL will be resolved relative to this)
+# root = "."
+root = "/media/4TBNVME/datasets/MVTec-2k"
+
+# Output file path for the converted dataset
+# output = "verl_crop_dataset.parquet"
+output = "data/visa/test/test_dataset.parquet"
+
+# Output format: "parquet" or "jsonl"
+format = "parquet"
+
+limit = 0

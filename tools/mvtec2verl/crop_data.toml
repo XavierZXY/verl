@@ -1,0 +1,57 @@
+# Configuration for crop inspection tool data conversion
+# This config is specifically designed for training models with crop inspection capabilities
+
+# Input JSONL file containing the original dataset
+# input = "data.jsonl"
+input = "upload_data/VisA/test/test.jsonl"
+
+# Root directory for images (relative paths in JSONL will be resolved relative to this)
+# root = "."
+# root = "/media/4TBNVME/datasets/MVTec-2k"
+root = "/media/4TBNVME/datasets/VisA-2K"
+
+# Output file path for the converted dataset
+# output = "verl_crop_dataset.parquet"
+output = "/home/takisobe/zxy/codes/DeepEyes/data/crop/test/test_dataset.parquet"
+
+# Output format: "parquet" or "jsonl"
+format = "parquet"
+
+limit = 0
+
+# Limit number of items to process (null/empty for no limit)
+# Useful for testing with smaller datasets
+# Additional crop tool specific configurations
+[crop_tool]
+# Maximum number of crop levels allowed
+max_crop_levels = 5
+
+# Enable enhanced reward evaluation
+use_enhanced_evaluation = true
+
+# Crop tool specific reward weights
+[crop_tool.reward_weights]
+accuracy = 0.4            # Answer accuracy weight
+tool_usage = 0.3          # Crop tool usage effectiveness weight  
+localization = 0.2        # Localization accuracy weight
+type_classification = 0.2 # Type classification weight
+vision_usage = 0.3        # Vision tool usage weight
+format_penalty = 0.1      # Format validation penalty weight
+bbox_format = 0.1         # Bbox format bonus weight
+
+# Training strategy configuration
+[training]
+# Training stage for progressive rewards: "early", "mid", "late"
+stage = "mid"
+
+# Curriculum learning settings
+enable_curriculum = false
+total_steps = 10000
+
+# Data augmentation settings
+[augmentation]
+# Enable data augmentation for crop tool training
+enabled = false
+crop_jitter = 0.1      # Random jitter for crop coordinates
+rotation_range = 5     # Random rotation range in degrees
+brightness_range = 0.1 # Random brightness adjustment range
