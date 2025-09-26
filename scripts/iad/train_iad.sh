@@ -2,8 +2,8 @@
 
 set -x
 
-export LLM_AS_A_JUDGE_BASE="10.21.239.180:9091/v1"
-export WANDB_API_KEY="your wandb key"
+export LLM_AS_A_JUDGE_BASE="http://10.21.239.180:9091/v1"
+export WANDB_API_KEY="f7765111db57c95bec25aaf0c9ae1191b9542b7f"
 
 PROJECT_NAME="iad-grounding"
 EXPERIMENT_NAME="debug_for_bbox"
@@ -12,17 +12,17 @@ BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # DATASET_TRAIN=${BASEDIR}/data/train.parquet
 # DATASET_VAL=${BASEDIR}/data/val.parquet
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/data_0.1.2_visual_toolbox_v2.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/data_0.1.2_visual_toolbox_v2.parquet
+DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 BATCH_SIZE=128
-PPO_BATCH_SIZE=128
-MICRO_BATCH_SIZE=1
+PPO_BATCH_SIZE=64
+MICRO_BATCH_SIZE=2
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=1
-ROLLOUT_PARALLELISM=8
+LOG_PER_GPU_BATCH_SIZE=2
+ROLLOUT_PARALLELISM=2
 ROLLOUT_UTIL=0.2
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
@@ -41,7 +41,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     algorithm.kl_ctrl.kl_coef=0.0 \
     actor_rollout_ref.model.path=${REF_MODEL_PATH} \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.model.use_fused_kernels=True \
+    actor_rollout_ref.model.use_fused_kernels=False \
     actor_rollout_ref.actor.optim.lr=${LR} \
     actor_rollout_ref.actor.ppo_mini_batch_size=${PPO_BATCH_SIZE} \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=${MICRO_BATCH_SIZE} \
@@ -80,7 +80,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.test_freq=10 \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \
-    trainer.rollout_data_dir=${SAVE_CHECKPOINT_DIR}/logs/rollout_data/${EXPERIMENT_NAME} \
+    trainer.rollout_data_dir=${SAV_CHECKPOINT_DIR}/logs/rollout_data/${EXPERIMENT_NAME} \
     trainer.default_local_dir=${SAVE_CHECKPOINT_DIR}/${PROJECT_NAME}/${EXPERIMENT_NAME} \
     +trainer.tensorboard_dir=${SAVE_CHECKPOINT_DIR}/logs/tensorboard \
     +trainer.rl_logging_board_dir=${SAVE_CHECKPOINT_DIR}/logs/rl_logging_board \
