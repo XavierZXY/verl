@@ -2,7 +2,7 @@
 
 set -x
 
-export LLM_AS_A_JUDGE_BASE="0.0.0.0:9091/v1"
+export LLM_AS_A_JUDGE_BASE="10.21.239.180:9091/v1"
 export WANDB_API_KEY="your wandb key"
 
 PROJECT_NAME="iad-grounding"
