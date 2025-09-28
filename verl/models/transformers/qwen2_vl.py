@@ -394,7 +394,14 @@ def process_position_ids(position_ids: torch.Tensor) -> torch.Tensor:
     if position_ids.ndim != 3 or position_ids.size(0) != 4:
         # we concat the text position ids with the 3D vision position ids by default
         # see https://github.com/huggingface/transformers/pull/39447
-        raise ValueError("position_ids should be a 3D tensor of shape (4, batch_size, seq_length).")
+        # position_ids = position_ids.permute(1, 0, 2)
+        # print(f"------------------- position_ids.shape: {position_ids.shape}")
+        # change [batch_size, 4, seq_length] to [4, batch_size, seq_length]
+        # position_ids = position_ids[1:]
+        # pass
+        position_ids = position_ids[1:]
+        
+        # raise ValueError("position_ids should be a 3D tensor of shape (4, batch_size, seq_length).")
 
     if is_transformers_version_in_range(max_version="4.53.3"):
         # transformers < 4.54.0 only accepts vision position ids, so we discard the text position ids here

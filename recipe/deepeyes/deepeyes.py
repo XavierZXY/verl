@@ -122,6 +122,7 @@ class CustomRLHFDataset(RLHFDataset):
 
         if self.processor is not None and "Qwen2VLImageProcessor" in self.processor.image_processor.__class__.__name__:
             from verl.models.transformers.qwen2_vl import get_rope_index
+            print("---------------------------Using rope position id computation.")
 
             position_ids = [
                 get_rope_index(
@@ -135,6 +136,7 @@ class CustomRLHFDataset(RLHFDataset):
             ]  # (1, 3, seq_len)
 
         else:
+            print("---------------------------Using default position id computation.")
             position_ids = compute_position_id_with_mask(attention_mask)
 
         row_dict["input_ids"] = input_ids[0]

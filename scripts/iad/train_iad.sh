@@ -3,7 +3,7 @@
 set -x
 
 export LLM_AS_A_JUDGE_BASE="http://10.21.239.180:9091/v1"
-export WANDB_API_KEY="f7765111db57c95bec25aaf0c9ae1191b9542b7f"
+export WANDB_API_KEY="18fd5045bbb1e4c755167b1897f38a2c786250ed"
 
 PROJECT_NAME="iad-grounding"
 EXPERIMENT_NAME="debug_for_bbox"
@@ -21,8 +21,8 @@ BATCH_SIZE=128
 PPO_BATCH_SIZE=64
 MICRO_BATCH_SIZE=2
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=2
-ROLLOUT_PARALLELISM=2
+LOG_PER_GPU_BATCH_SIZE=4
+ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.2
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
@@ -40,7 +40,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     algorithm.kl_ctrl.kl_coef=0.0 \
     actor_rollout_ref.model.path=${REF_MODEL_PATH} \
-    actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.model.use_remove_padding=False \
     actor_rollout_ref.model.use_fused_kernels=False \
     actor_rollout_ref.actor.optim.lr=${LR} \
     actor_rollout_ref.actor.ppo_mini_batch_size=${PPO_BATCH_SIZE} \
@@ -72,7 +72,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_parallel_calls=1 \
     actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/deepeyes/configs/image_zoom_in_tool_config.yaml \
     trainer.critic_warmup=0 \
-    trainer.logger=['console','wandb','tensorboard'] \
+    trainer.logger=['console','wandb'] \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
@@ -80,8 +80,8 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.test_freq=10 \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \
-    trainer.rollout_data_dir=${SAV_CHECKPOINT_DIR}/logs/rollout_data/${EXPERIMENT_NAME} \
     trainer.default_local_dir=${SAVE_CHECKPOINT_DIR}/${PROJECT_NAME}/${EXPERIMENT_NAME} \
     +trainer.tensorboard_dir=${SAVE_CHECKPOINT_DIR}/logs/tensorboard \
     +trainer.rl_logging_board_dir=${SAVE_CHECKPOINT_DIR}/logs/rl_logging_board \
     trainer.total_epochs=1 2>&1 | tee ./logs/${EXPERIMENT_NAME}.log
+    # trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \

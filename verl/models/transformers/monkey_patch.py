@@ -246,36 +246,42 @@ def apply_monkey_patch(
             from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
                 Qwen2_5_VLForConditionalGeneration,
                 Qwen2_5_VLModel,
-                Qwen2_5_VLTextModel,
+                # Qwen2_5_VLTextModel,
             )
             from transformers.models.qwen2_vl.modeling_qwen2_vl import (
                 Qwen2VLForConditionalGeneration,
                 Qwen2VLModel,
-                Qwen2VLTextModel,
+                # Qwen2VLTextModel,
             )
         else:
             from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
-            from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLModel as Qwen2_5_VLTextModel
+            # from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLModel as Qwen2_5_VLTextModel
             from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLForConditionalGeneration
-            from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLModel as Qwen2VLTextModel
+            # from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLModel as Qwen2VLTextModel
 
             Qwen2_5_VLModel = SimpleNamespace(forward=None)
             Qwen2VLModel = SimpleNamespace(forward=None)
 
         from verl.models.transformers.qwen2_vl import forward_with_normal_backend, qwen2_vl_base_forward
 
-        Qwen2_5_VLModel.forward = qwen2_vl_base_forward
-        Qwen2VLModel.forward = qwen2_vl_base_forward
-        Qwen2_5_VLForConditionalGeneration.forward = forward_with_normal_backend
-        Qwen2VLForConditionalGeneration.forward = forward_with_normal_backend
+        # Qwen2_5_VLModel.forward = qwen2_vl_base_forward
+        # Qwen2VLModel.forward = qwen2_vl_base_forward
+        # Qwen2_5_VLForConditionalGeneration.forward = forward_with_normal_backend
+        # Qwen2VLForConditionalGeneration.forward = forward_with_normal_backend
         print(f"Monkey patch {model.__class__.__name__} model forward")
 
         # Step 2: patch attention to support ulysses parallelism
         if is_transformers_version_in_range(min_version="4.54.0"):
             from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLAttention
             from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLAttention
+            
         elif is_transformers_version_in_range(min_version="4.53.0"):
-            raise RuntimeError("Transformers 4.53.* is bugged. Use transformers 4.54.0 or later.")
+            # from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLAttention
+            # from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLAttention
+            # Qwen2_5_VLAttention.forward = _ulysses_flash_attn_forward
+            # Qwen2VLAttention.forward = _ulysses_flash_attn_forward
+            pass
+            # raise RuntimeError("Transformers 4.53.* is bugged. Use transformers 4.54.0 or later.")
         else:
             from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
                 Qwen2_5_VLFlashAttention2 as Qwen2_5_VLAttention,
@@ -292,9 +298,9 @@ def apply_monkey_patch(
             print(f"Monkey patch {model.__class__.__name__} attention layer")
 
         # Step 3: patch input for multimodal sequence parallelism
-        if ulysses_sp_size > 1:
-            patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLTextModel)
-            patch_vlm_for_ulysses_input_slicing(Qwen2VLTextModel)
+        # if ulysses_sp_size > 1:
+            # patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLTextModel)
+            # patch_vlm_for_ulysses_input_slicing(Qwen2VLTextModel)
 
     elif model.config.model_type == "kimi_vl":
         if use_remove_padding or ulysses_sp_size > 1:
