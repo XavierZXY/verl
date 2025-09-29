@@ -262,12 +262,12 @@ def apply_monkey_patch(
             Qwen2_5_VLModel = SimpleNamespace(forward=None)
             Qwen2VLModel = SimpleNamespace(forward=None)
 
-        from verl.models.transformers.qwen2_vl import forward_with_normal_backend, qwen2_vl_base_forward
+        from verl.models.transformers.qwen2_vl import forward_with_normal_backend, qwen2_vl_base_forward, forward_with_torch_backend
 
-        Qwen2_5_VLModel.forward = qwen2_vl_base_forward
-        Qwen2VLModel.forward = qwen2_vl_base_forward
-        Qwen2_5_VLForConditionalGeneration.forward = forward_with_normal_backend
-        Qwen2VLForConditionalGeneration.forward = forward_with_normal_backend
+        # Qwen2_5_VLModel.forward = qwen2_vl_base_forward
+        # Qwen2VLModel.forward = qwen2_vl_base_forward
+        # Qwen2_5_VLForConditionalGeneration.forward = forward_with_torch_backend
+        # Qwen2VLForConditionalGeneration.forward = forward_with_torch_backend
         print(f"Monkey patch {model.__class__.__name__} model forward")
 
         # Step 2: patch attention to support ulysses parallelism

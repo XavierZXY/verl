@@ -1031,6 +1031,15 @@ class RayPPOTrainer:
                     batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     batch = batch.union(gen_batch_output)
 
+                    # debug: print the batch
+                    # outputs_temp = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
+                    # print("Sample generations:")
+                    # count_temp = 0
+                    # for output in outputs_temp:
+                    #     print(output)
+                    #     count_temp += 1
+                    # print("End of sample generations. Total {} samples.".format(count_temp))
+                    # debug end
                     if "response_mask" not in batch.batch.keys():
                         batch.batch["response_mask"] = compute_response_mask(batch)
                     # Balance the number of valid tokens across DP ranks.

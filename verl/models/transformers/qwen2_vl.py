@@ -441,6 +441,7 @@ def qwen2_vl_forward(
     **kwargs,
 ):
     if is_transformers_version_in_range(min_version="4.52.0"):
+        print("flag for 4.52.0+")
         return self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -452,6 +453,8 @@ def qwen2_vl_forward(
             **kwargs,
         )
     else:
+        print("flag for 4.52.0-")
+        
         inputs_embeds, attention_mask = _get_input_embeds(
             self, input_ids, attention_mask, pixel_values, pixel_values_videos, image_grid_thw, video_grid_thw
         )
@@ -471,6 +474,8 @@ def forward_with_normal_backend(
     temperature: float = 1.0,
     **kwargs,
 ) -> "Qwen2VLCausalLMOutputWithPast":
+    print("flag for normal backend")
+    print("all kwargs:", kwargs.keys(), "position id", kwargs.get("position_ids").shape if kwargs.get("position_ids") is not None else None)
     outputs = qwen2_vl_forward(self, input_ids, **kwargs)
     hidden_states = outputs[0]
     logits = self.lm_head(hidden_states)
@@ -488,6 +493,7 @@ def forward_with_torch_backend(
     temperature: float = 1.0,
     **kwargs,
 ) -> tuple | Qwen2VLCausalLMOutputForPPO:
+    print("flag for torch backend")
     from verl.utils.experimental.torch_functional import FusedLinearForPPO
 
     outputs = qwen2_vl_forward(self, input_ids, **kwargs)
@@ -522,6 +528,7 @@ def forward_with_triton_backend(
     temperature: float = 1.0,
     **kwargs,
 ) -> tuple | Qwen2VLCausalLMOutputForPPO:
+    print("flag for triton backend")
     from verl.utils.kernel.linear_cross_entropy import linear_cross_entropy
 
     outputs = qwen2_vl_forward(self, input_ids, **kwargs)
