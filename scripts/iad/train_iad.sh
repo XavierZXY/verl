@@ -6,7 +6,7 @@ export LLM_AS_A_JUDGE_BASE="http://10.21.239.180:9091/v1"
 export WANDB_API_KEY="18fd5045bbb1e4c755167b1897f38a2c786250ed"
 
 PROJECT_NAME="iad-grounding"
-EXPERIMENT_NAME="debug_for_bbox"
+EXPERIMENT_NAME="debug_for_vllm0.10.0"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
@@ -23,7 +23,7 @@ MICRO_BATCH_SIZE=2
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=4
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.2
+ROLLOUT_UTIL=0.3
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 # ---------------- Train config -----------------
