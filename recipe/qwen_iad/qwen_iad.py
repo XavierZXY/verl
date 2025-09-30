@@ -49,7 +49,9 @@ SYSTEM_PROMPT: str = (
     '4.  `<answer></answer>`: Conclude with "no".'
 )
 openai_api_key = "EMPTY"
-openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
+openai_api_base = os.environ.get(
+    "LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1"
+)
 
 client = OpenAI(
     api_key=openai_api_key,
@@ -65,9 +67,13 @@ if openai_api_base:
         if models.get("data"):
             model_name = models["data"][0]["id"]
         else:
-            logger.warning("No models found at the specified API base for reward scoring.")
+            logger.warning(
+                "No models found at the specified API base for reward scoring."
+            )
     except (requests.exceptions.RequestException, KeyError, IndexError) as e:
-        logger.warning(f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled.")
+        logger.warning(
+            f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled."
+        )
 
 
 class CustomRLHFDataset(RLHFDataset):
@@ -91,19 +97,26 @@ class CustomRLHFDataset(RLHFDataset):
         model_inputs = {}
 
         if self.processor is not None:
-            raw_prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+            raw_prompt = self.processor.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
             multi_modal_data = {}
 
             images = None
             row_dict_images = row_dict.pop(self.image_key, None)
             if row_dict_images:
-                images = [Image.open(io.BytesIO(image["bytes"])) for image in row_dict_images]
+                images = [
+                    Image.open(io.BytesIO(image["bytes"]))
+                    for image in row_dict_images
+                ]
 
                 # due to the image key is "image" instead of "images" in vllm, we need to use "image" here
                 # link: https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205  # noqa: E501
                 multi_modal_data["image"] = images
 
-            model_inputs = self.processor(text=[raw_prompt], images=images, return_tensors="pt")
+            model_inputs = self.processor(
+                text=[raw_prompt], images=images, return_tensors="pt"
+            )
 
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
@@ -123,8 +136,12 @@ class CustomRLHFDataset(RLHFDataset):
                 row_dict["multi_modal_inputs"].pop("second_per_grid_ts", None)
 
         else:
-            raw_prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-            model_inputs = self.tokenizer(raw_prompt, return_tensors="pt", add_special_tokens=False)
+            raw_prompt = self.tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+            model_inputs = self.tokenizer(
+                raw_prompt, return_tensors="pt", add_special_tokens=False
+            )
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
 
@@ -137,7 +154,11 @@ class CustomRLHFDataset(RLHFDataset):
             truncation=self.truncation,
         )
 
-        if self.processor is not None and "Qwen2VLImageProcessor" in self.processor.image_processor.__class__.__name__:
+        if (
+            self.processor is not None
+            and "Qwen2VLImageProcessor"
+            in self.processor.image_processor.__class__.__name__
+        ):
             from verl.models.transformers.qwen2_vl import get_rope_index
 
             position_ids = [
@@ -158,7 +179,9 @@ class CustomRLHFDataset(RLHFDataset):
         row_dict["attention_mask"] = attention_mask[0]
         row_dict["position_ids"] = position_ids[0]
 
-        raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
+        raw_prompt_ids = self.tokenizer.encode(
+            raw_prompt, add_special_tokens=False
+        )
         if len(raw_prompt_ids) > self.max_prompt_length:
             if self.truncation == "left":
                 raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length :]
@@ -167,9 +190,13 @@ class CustomRLHFDataset(RLHFDataset):
             elif self.truncation == "middle":
                 left_half = self.max_prompt_length // 2
                 right_half = self.max_prompt_length - left_half
-                raw_prompt_ids = raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
+                raw_prompt_ids = (
+                    raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
+                )
             elif self.truncation == "error":
-                raise RuntimeError(f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}.")
+                raise RuntimeError(
+                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
+                )
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template
@@ -196,192 +223,397 @@ class CustomRLHFDataset(RLHFDataset):
         return row_dict
 
 
-def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_info=None) -> float:
-    """
-    Compute reward score for model solutions with robust handling of various formats.
+def extract_answer(text):
+    """Extract content from <answer></answer> tags."""
+    pattern = r"<answer>(.*?)</answer>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
 
-    Returns a weighted combination of:
-    - Accuracy reward (0.8 weight): Whether the answer is semantically correct
-    - Format reward (0.2 weight): Whether the output follows expected format
-    - Tool reward (1.2 weight): Whether tools were used when answer is correct
-    """
 
-    # Initialize tracking variables
+def extract_location(text):
+    """Extract content from <location></location> tags."""
+    pattern = r"<location>(.*?)</location>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def extract_type(text):
+    """Extract content from <type></type> tags."""
+    pattern = r"<type>(.*?)</type>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _parse_predicted_bboxes(location_text):
+    """Parse predicted bboxes from location JSON string into list of [x1,y1,x2,y2]."""
+    if not location_text:
+        return []
+
+    import json
+
+    # Try strict JSON first
+    try:
+        loc = json.loads(location_text)
+    except Exception:
+        # Try Python-literal style (single quotes, None, etc.)
+        try:
+            import ast
+
+            loc = ast.literal_eval(location_text)
+        except Exception:
+            loc = None
+
+    boxes = []
+    if isinstance(loc, list):
+        for item in loc:
+            if isinstance(item, dict):
+                arr = item.get("bbox2d") or item.get("bbox_2d")
+                if isinstance(arr, (list, tuple)) and len(arr) == 4:
+                    try:
+                        boxes.append([float(v) for v in arr])
+                    except Exception:
+                        continue
+
+    if boxes:
+        return boxes
+
+    # Regex fallback: extract any [x1,y1,x2,y2]
+    try:
+        pattern = r"\[\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*\]"
+        matches = re.findall(pattern, location_text)
+        for m in matches:
+            vals = [float(x) for x in m]
+            if len(vals) == 4:
+                boxes.append(vals)
+        return boxes
+    except Exception as e:
+        logger.error(f"Failed to parse predicted bboxes: {e}")
+        return []
+
+
+def _extract_gt_bboxes(ground_truth, extra_info):
+    """Extract ground truth bboxes list[[x1,y1,x2,y2]]."""
+    boxes = []
+    # Prefer ground_truth dict
+    try:
+        if isinstance(ground_truth, dict) and "bboxes" in ground_truth:
+            gt_boxes = ground_truth["bboxes"]
+            try:
+                iterable = list(gt_boxes)
+            except Exception:
+                iterable = []
+            if iterable:
+                for item in iterable:
+                    if isinstance(item, dict):
+                        arr = item.get("bbox2d") or item.get("bbox_2d")
+                        if isinstance(arr, list) and len(arr) == 4:
+                            boxes.append([float(v) for v in arr])
+        # Fallback to extra_info
+        if not boxes and extra_info and "bboxes" in extra_info:
+            gt_boxes = extra_info["bboxes"]
+            try:
+                iterable = list(gt_boxes)
+            except Exception:
+                iterable = []
+            if iterable:
+                for item in iterable:
+                    if isinstance(item, dict):
+                        arr = item.get("bbox2d") or item.get("bbox_2d")
+                        if isinstance(arr, list) and len(arr) == 4:
+                            boxes.append([float(v) for v in arr])
+    except Exception as e:
+        logger.error(f"Failed to extract GT bboxes: {e}")
+    return boxes
+
+
+def _bbox_iou_xyxy(box_a, box_b):
+    """Compute IoU between two bboxes in xyxy format."""
+    x1 = max(box_a[0], box_b[0])
+    y1 = max(box_a[1], box_b[1])
+    x2 = min(box_a[2], box_b[2])
+    y2 = min(box_a[3], box_b[3])
+    inter_w = max(0.0, x2 - x1)
+    inter_h = max(0.0, y2 - y1)
+    inter = inter_w * inter_h
+    area_a = max(0.0, box_a[2] - box_a[0]) * max(0.0, box_a[3] - box_a[1])
+    area_b = max(0.0, box_b[2] - box_b[0]) * max(0.0, box_b[3] - box_b[1])
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
+def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
+    """
+    Improved IoU-based reward calculation with proper union computation.
+    Limits predicted boxes to max_pred_boxes and uses proper IoU formula.
+    """
+    # Limit predicted boxes to avoid excessive outputs
+    if len(pred_boxes) > max_pred_boxes:
+        pred_boxes = pred_boxes[:max_pred_boxes]
+
+    # Empty cases
+    if len(gt_boxes) == 0 and len(pred_boxes) == 0:
+        return 1.0
+    if len(gt_boxes) == 0 and len(pred_boxes) > 0:
+        # Penalty for false positive detections
+        return max(0.0, 1.0 - 0.2 * len(pred_boxes))
+    if len(gt_boxes) > 0 and len(pred_boxes) == 0:
+        # Penalty for missing detections
+        return 0.0
+
+    # Compute proper IoU with intersection/union formula
+    def compute_proper_iou(box1, box2):
+        """Compute IoU = intersection / union"""
+        x1_inter = max(box1[0], box2[0])
+        y1_inter = max(box1[1], box2[1])
+        x2_inter = min(box1[2], box2[2])
+        y2_inter = min(box1[3], box2[3])
+
+        inter_area = max(0.0, x2_inter - x1_inter) * max(
+            0.0, y2_inter - y1_inter
+        )
+
+        area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
+        area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
+        union_area = area1 + area2 - inter_area
+
+        return inter_area / union_area if union_area > 0 else 0.0
+
+    # Compute best matching IoU for each GT box
+    gt_ious = []
+    for gt_box in gt_boxes:
+        best_iou = 0.0
+        for pred_box in pred_boxes:
+            iou = compute_proper_iou(gt_box, pred_box)
+            best_iou = max(best_iou, iou)
+        gt_ious.append(best_iou)
+
+    # Compute best matching IoU for each predicted box
+    pred_ious = []
+    for pred_box in pred_boxes:
+        best_iou = 0.0
+        for gt_box in gt_boxes:
+            iou = compute_proper_iou(pred_box, gt_box)
+            best_iou = max(best_iou, iou)
+        pred_ious.append(best_iou)
+
+    # Use the average of both directions, weighted by recall and precision
+    recall = sum(gt_ious) / len(gt_ious) if gt_ious else 0.0
+    precision = sum(pred_ious) / len(pred_ious) if pred_ious else 0.0
+
+    # F1-score like combination
+    if recall + precision > 0:
+        f1_score = 2 * (recall * precision) / (recall + precision)
+    else:
+        f1_score = 0.0
+
+    # Apply progressive IoU thresholds for better reward shaping
+    if f1_score >= 0.7:
+        return 1.0
+    elif f1_score >= 0.5:
+        return 0.8 + 0.2 * (f1_score - 0.5) / 0.2
+    elif f1_score >= 0.3:
+        return 0.5 + 0.3 * (f1_score - 0.3) / 0.2
+    else:
+        return f1_score / 0.3 * 0.5
+
+
+def _extract_ground_truth_answer(ground_truth, extra_info):
+    """Return the textual ground truth answer if available."""
+    answer = None
+
+    if isinstance(ground_truth, dict):
+        answer = ground_truth.get("answer")
+    elif isinstance(ground_truth, str):
+        answer = ground_truth
+    elif ground_truth is not None:
+        answer = str(ground_truth)
+
+    if answer is None and extra_info is not None:
+        answer_info = extra_info.get("answer")
+        if isinstance(answer_info, dict):
+            answer = answer_info.get("answer")
+        elif isinstance(answer_info, str):
+            answer = answer_info
+
+    return (answer or "").strip()
+
+
+def compute_score(
+    data_source: str, solution_str: str, ground_truth: str, extra_info=None
+) -> float:
+    """
+    Compute reward score for defect detection task.
+
+    The score consists of three components:
+    1. Format reward: Checks if output follows expected format with proper tags
+    2. Answer correctness reward: Uses LLM judge to evaluate answer accuracy
+    3. Bbox correctness reward: Only computed when answer is correct, evaluates bbox IoU
+
+    Args:
+        data_source: Source of the data (not used currently)
+        solution_str: Model's solution string
+        ground_truth: Ground truth answer (can be dict or string)
+        extra_info: Additional information including question, bboxes, etc.
+
+    Returns:
+        float: Final reward score
+    """
+    import json
+
     is_format_error = False
 
-    # 1. Check <think> tag format
+    # 1. Format checking - check all required tags
     count_think_1 = solution_str.count("<think>")
     count_think_2 = solution_str.count("</think>")
     if count_think_1 != count_think_2:
         is_format_error = True
 
-    # 2. Check vision tokens (skip this since tokenizer removes special tokens)
-    # We'll use <tool_call> and <tool_response> instead to detect tool usage
-
-    # 3. Extract answer text with multiple fallback strategies
-    answer_text = ""
-
-    # Strategy 1: Try to extract from <answer> tags first
     predict_no_think = (
-        solution_str.split("</think>")[-1].strip() if "</think>" in solution_str else solution_str.strip()
+        solution_str.split("</think>")[-1].strip()
+        if "</think>" in solution_str
+        else solution_str
     )
 
-    # Check <answer> tag format
     count_answer_1 = predict_no_think.count("<answer>")
     count_answer_2 = predict_no_think.count("</answer>")
     if count_answer_1 != count_answer_2:
         is_format_error = True
 
-    # Try to extract from <answer> tags
-    answer_match = re.search(r"<answer>(.*?)</answer>", predict_no_think, re.DOTALL)
-    if answer_match:
-        answer_text = answer_match.group(1).strip()
-    else:
-        # No proper <answer> tags found - this is a format error
+    count_location_1 = predict_no_think.count("<location>")
+    count_location_2 = predict_no_think.count("</location>")
+    if count_location_1 != count_location_2:
         is_format_error = True
 
-        # Strategy 2: If no <answer> tags, extract content after tool responses
-        # Look for pattern: <tool_response>...</tool_response>assistant\n[actual_answer]
-        tool_response_match = re.search(
-            r"</tool_response>\s*assistant\s*\n(.*?)$",
-            predict_no_think,
-            re.DOTALL | re.MULTILINE,
-        )
-        if tool_response_match:
-            answer_text = tool_response_match.group(1).strip()
-        else:
-            # Strategy 3: If no tool responses, look for content after </think>
-            if "</think>" in solution_str:
-                # Remove any remaining tool-related tags and extract meaningful content
-                remaining_content = predict_no_think
-                # Remove tool calls and responses
-                remaining_content = re.sub(
-                    r"<tool_call>.*?</tool_call>",
-                    "",
-                    remaining_content,
-                    flags=re.DOTALL,
-                )
-                remaining_content = re.sub(
-                    r"<tool_response>.*?</tool_response>",
-                    "",
-                    remaining_content,
-                    flags=re.DOTALL,
-                )
-                # Remove user/assistant markers
-                remaining_content = re.sub(r"\b(user|assistant)\b", "", remaining_content)
-                answer_text = remaining_content.strip()
-            else:
-                # Strategy 4: Use the entire solution_str as fallback
-                answer_text = solution_str.strip()
+    count_type_1 = predict_no_think.count("<type>")
+    count_type_2 = predict_no_think.count("</type>")
+    if count_type_1 != count_type_2:
+        is_format_error = True
 
-    # Clean up answer text
-    answer_text = answer_text.strip()
+    # Extract components
+    answer_text = extract_answer(predict_no_think)
+    location_text = extract_location(predict_no_think)
+    type_text = extract_type(predict_no_think)  # noqa: F841 - extracted for format checking, not used in reward
 
-    # If answer is still empty after all strategies, mark as format error
+    # Check if answer exists
     if not answer_text:
         is_format_error = True
-        answer_text = solution_str.strip()  # Use full text as last resort
+        answer_text = ""
 
-    # 4. Evaluate correctness using LLM judge
+    # Check bbox format (3-box limit)
+    bbox_format_ok = False
+    if location_text:
+        try:
+            loc = json.loads(location_text)
+            if isinstance(loc, list) and len(loc) <= 3:
+                bbox_format_ok = all(
+                    isinstance(item, dict)
+                    and ("bbox2d" in item or "bbox_2d" in item)
+                    and isinstance(
+                        (item.get("bbox2d") or item.get("bbox_2d")), list
+                    )
+                    and len((item.get("bbox2d") or item.get("bbox_2d"))) == 4
+                    for item in loc
+                )
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Format reward: -1.0 if format error, 0.0 otherwise
+    format_reward = -1.0 if is_format_error else 0.0
+
+    # 2. Answer correctness using LLM judge
+    if not client or not model_name:
+        logger.warning(
+            "Reward function client not initialized or model name not found."
+        )
+        return format_reward
+
+    # Extract ground truth answer
+    ground_truth_answer = _extract_ground_truth_answer(ground_truth, extra_info)
     question_text = extra_info.get("question", "") if extra_info else ""
 
-    if not client or not model_name:
-        logger.warning("Reward function client not initialized or model name not found.")
-        return 0.0
-
-    system_prompt = (
-        "You are an expert evaluator. Your task is to determine if a model's answer is semantically equivalent to a "
-        "provided standard answer, given a specific question.\n"
-        "Your evaluation must be strict. The model's answer is only correct if it fully matches the meaning of the "
-        "standard answer.\n"
-        'You must provide your final judgement as a single word: either "CORRECT" or "INCORRECT". Do not provide '
-        "any explanation or other text."
-    )
-
-    user_prompt = (
-        f"I will provide a question, a standard answer, and a model's answer. You must evaluate if the model's "
-        f"answer is correct.\n\n"
-        f"---\n"
-        f"**Example 1:**\n"
-        f"[Question]: Is the countertop tan or blue?\n"
-        f"[Standard Answer]: The countertop is tan.\n"
-        f"[Model's Answer]: tan\n"
-        f"[Your Judgement]: CORRECT\n"
-        f"---\n"
-        f"**Example 2:**\n"
-        f"[Question]: Is the man phone both blue and closed?\n"
-        f"[Standard Answer]: Yes, the man phone is both blue and closed.\n"
-        f"[Model's Answer]: No.\n"
-        f"[Your Judgement]: INCORRECT\n"
-        f"---\n"
-        f"**Task:**\n"
-        f"[Question]: {question_text}\n"
-        f"[Standard Answer]: {ground_truth}\n"
-        f"[Model's Answer]: {answer_text}\n"
-        f"[Your Judgement]:"
-    )
-
-    try:
-        chat_response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            seed=random.randint(0, 1000000),
-            temperature=0.1,  # Lower temperature for more deterministic judgement
-            extra_body={
-                "chat_template_kwargs": {"enable_thinking": False},
-            },
-        )
-        response = chat_response.choices[0].message.content.strip()
-    except Exception as e:
-        logger.warning(f" [WARNING] Chat completion request failed: {e}")
-        return 0.0
-
-    # Parse LLM judge response
-    if re.search(r"\bCORRECT\b", response, re.IGNORECASE):
-        acc_reward = 1.0
-    elif re.search(r"\bINCORRECT\b", response, re.IGNORECASE):
-        acc_reward = 0.0
-    else:
-        logger.warning(
-            f" [WARNING] Judgement format error. Expected 'CORRECT' or 'INCORRECT'.\n"
-            f"Response: '{response}'\n"
-            f"Model Answer: '{answer_text}'\n"
-            f"Ground Truth: '{ground_truth}'"
-        )
-        acc_reward = 0.0
-
-    # Penalize excessively long answers (potential judge hacking)
+    # Penalize excessively long answers
     if len(answer_text) >= 1000:
         acc_reward = 0.0
         is_format_error = True
-
-    # 5. Check tool usage - look for tool_call/tool_response patterns instead of vision tokens
-    has_tool_usage = bool(
-        re.search(r"<tool_call>.*?</tool_call>", solution_str, re.DOTALL)
-        or re.search(r"<tool_response>.*?</tool_response>", solution_str, re.DOTALL)
-    )
-
-    # Tool reward: only give if tools were used AND answer is correct
-    tool_reward = 1.0 if has_tool_usage and acc_reward > 0.5 else 0.0
-
-    # Format reward: penalty for format errors
-    format_reward = -1.0 if is_format_error else 0.0
-
-    # Log debug information for problematic cases
-    if is_format_error or not answer_text:
-        logger.debug(
-            f"Format issue detected:\n"
-            f"Solution: {solution_str[:200]}...\n"
-            f"Extracted answer: '{answer_text}'\n"
-            f"Format error: {is_format_error}\n"
-            f"Tool usage: {has_tool_usage}"
+        format_reward = -1.0
+    elif not answer_text:
+        acc_reward = 0.0
+    else:
+        # Use LLM judge to evaluate answer correctness
+        system_prompt = (
+            "You are an expert evaluator for industrial defect detection. Your task is to determine if a model's "
+            "answer is semantically equivalent to the standard answer.\n"
+            "The answer should be 'yes' or 'no' (or variations like 'Yes. There has been a defect detected.').\n"
+            'You must provide your final judgement as a single word: either "CORRECT" or "INCORRECT".'
         )
 
-    # Final weighted score
-    final_score = 0.8 * acc_reward + 0.2 * format_reward + 1.2 * tool_reward
+        user_prompt = (
+            f"Evaluate if the model's answer matches the standard answer.\n\n"
+            f"[Question]: {question_text}\n"
+            f"[Standard Answer]: {ground_truth_answer}\n"
+            f"[Model's Answer]: {answer_text}\n"
+            f"[Your Judgement]:"
+        )
+
+        try:
+            chat_response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                seed=random.randint(0, 1000000),
+                temperature=0.1,
+                extra_body={
+                    "chat_template_kwargs": {"enable_thinking": False},
+                },
+            )
+            response = chat_response.choices[0].message.content.strip()
+
+            if re.search(r"\bCORRECT\b", response, re.IGNORECASE):
+                acc_reward = 1.0
+            elif re.search(r"\bINCORRECT\b", response, re.IGNORECASE):
+                acc_reward = 0.0
+            else:
+                logger.warning(f"LLM judge format error. Response: {response}")
+                acc_reward = 0.0
+        except Exception as e:
+            logger.warning(f"LLM judge request failed: {e}")
+            acc_reward = 0.0
+
+    # 3. Bbox correctness reward - ONLY computed when answer is correct
+    bbox_reward = 0.0
+    if acc_reward > 0.5:  # Only compute bbox reward when answer is correct
+        # Parse predicted and ground truth bboxes
+        pred_boxes = _parse_predicted_bboxes(location_text)
+        gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
+
+        # Compute IoU-based reward
+        bbox_iou_reward = _improved_iou_reward(
+            pred_boxes, gt_boxes, max_pred_boxes=3
+        )
+
+        # Combine format and IoU rewards for bbox
+        bbox_reward = (
+            0.2 * (1.0 if bbox_format_ok else 0.0) + 0.8 * bbox_iou_reward
+        )
+
+    # Final score calculation
+    # Weights: format (0.3), answer accuracy (0.4), bbox (0.3)
+    final_score = 0.3 * format_reward + 0.4 * acc_reward + 0.3 * bbox_reward
+
+    # Log for debugging
+    if extra_info:
+        logger.debug(
+            f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
+            f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
+        )
 
     return final_score
 
@@ -401,7 +633,9 @@ if __name__ == "__main__":
     import time
 
     time_start = time.time()
-    score = compute_score("common_reasoning", predict_str, ground_truth, extra_info)
+    score = compute_score(
+        "common_reasoning", predict_str, ground_truth, extra_info
+    )
     print(f"Score: {score}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")

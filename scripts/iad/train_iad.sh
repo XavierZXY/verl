@@ -2,7 +2,7 @@
 
 set -x
 
-export LLM_AS_A_JUDGE_BASE="http://10.21.239.180:9091/v1"
+export LLM_AS_A_JUDGE_BASE="http://10.21.238.101:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 PROJECT_NAME="iad-grounding"
@@ -14,18 +14,18 @@ SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # DATASET_VAL=${BASEDIR}/data/val.parquet
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
 # DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_dataset.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_dataset.parquet
+DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_dataset.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
-BATCH_SIZE=8
-PPO_BATCH_SIZE=8
-MICRO_BATCH_SIZE=1
+BATCH_SIZE=32
+PPO_BATCH_SIZE=16
+MICRO_BATCH_SIZE=8
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=1
+LOG_PER_GPU_BATCH_SIZE=32
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.6
+ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
 N_ROLLOUT=16
 # ---------------- Train config -----------------
