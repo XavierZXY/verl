@@ -1,6 +1,0 @@
-input = "/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.jsonl"
-root = "/home/takisobe@amd.com/zxy/data/MVTec-2K"
-# root = "/media/4TBNVME/datasets/MVTec-2k"
-output = "/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet"
-format = "parquet"                                                            # or "jsonl"
-limit = 0                                                                     # use 0 or remove the key for no limit; any positive int to cap
