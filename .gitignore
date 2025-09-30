@@ -126,3 +126,6 @@ logs
 log
 outputs
 .history
+
+# wandb key
+wandb_key

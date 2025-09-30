@@ -3,8 +3,8 @@
 set -x
 
 export LLM_AS_A_JUDGE_BASE="http://10.21.239.180:9091/v1"
-export WANDB_API_KEY="18fd5045bbb1e4c755167b1897f38a2c786250ed"
-
+# load key from text file, the file is in the same directory as this script
+export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 PROJECT_NAME="iad-grounding"
 EXPERIMENT_NAME="debug_for_vllm"
 
@@ -28,8 +28,8 @@ N_GPUS_PER_NODE=8
 N_ROLLOUT=16
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
-    --config-path=${BASEDIR}/recipe/deepeyes/configs \
-    --config-name='deepeyes_multiturn_grpo' \
+    --config-path=${BASEDIR}/recipe/qwen_iad/configs \
+    --config-name='qiad_multiturn_grpo' \
     data.train_files=${DATASET_TRAIN} \
     data.val_files=[${DATASET_VAL}] \
     data.train_batch_size=${BATCH_SIZE} \
@@ -73,7 +73,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/deepeyes/configs/image_zoom_in_tool_config.yaml \
     trainer.critic_warmup=0 \
     trainer.logger=['console','wandb'] \
-    trainer.val_before_train=False \
+    trainer.val_before_train=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
     trainer.save_freq=20 \
