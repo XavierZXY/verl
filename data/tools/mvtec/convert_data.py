@@ -37,16 +37,16 @@ SYSTEM_PROMPT: str = (
     "1.  `<think></think>`: Provide a step-by-step reasoning process. Describe the visual "
     'characteristics of the anomaly (e.g., "I observe a dark, irregular crack on the upper left surface...").'
     "2.  `<location></location>`: Provide a JSON list of all detected defect locations.Notice! You should give the location of the only defects not the full object. Each item in the list must be a "
-    'JSON object with a "bbox2d" key and coordinates in `[x_min, y_min, x_max, y_max]` format. For example: `[{"bbox2d": [100, 150, 200, 250]}, {"bbox2d": [300, 350, 400, 450]}]`.Do not give more than 3 bounding boxes. '
+    'JSON object with a "bbox_2d" key and coordinates in `[x_min, y_min, x_max, y_max]` format. For example: `[{"bbox_2d": [100, 150, 200, 250]}, {"bbox_2d": [300, 350, 400, 450]}]`.Do not give more than 3 bounding boxes. '
     "If you are uncertain about the exact location, provide an approximate bounding box that best encompasses the defect area."
     '3.  `<type></type>`: Specify the type of defect found (e.g., "crack", "discoloration", "scratch", "hole", "surface" and "other"). If the type is uncertain, use "unspecified".'
-    '4.  `<answer></answer>`: Conclude with "yes".'
+    '4.  `<answer></answer>`: Conclude with "Yes. There has been a defect detected.".'
     "**If you detect NO defects:**"
     "Your response MUST be structured with the following two tags:"
     "1.  `<think></think>`: Explain why you believe the object is defect-free. Describe the normal and healthy features you observed."
     "2.  `<location></location>`: Provide an empty JSON list."
     '3.  `<type></type>`: "good".'
-    '4.  `<answer></answer>`: Conclude with "no".'
+    '4.  `<answer></answer>`: Conclude with "No. There is no defect detected.".'
 )
 INSTRUCTION_PROMPT: str = (
     "<image>.\nAnalyze this  image for defects. If there is no defect, answer 'no'. If there is defect, answer 'yes'."
