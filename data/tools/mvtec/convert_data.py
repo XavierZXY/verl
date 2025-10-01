@@ -3,9 +3,11 @@ import json
 import logging
 import os
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Any, Optional
 
 import pandas as pd
+from PIL import Image
 from rich.logging import RichHandler
 
 try:  # Python 3.11+
@@ -91,9 +93,57 @@ def _resolve_image_path(item: dict[str, Any], root: str) -> Optional[str]:
     return None
 
 
-def _read_image_bytes(path: str) -> bytes:
-    with open(path, "rb") as f:
-        return f.read()
+def _read_image_bytes(
+    path: str,
+    compress: bool = True,
+    quality: int = 85,
+    max_size: Optional[tuple[int, int]] = None,
+) -> bytes:
+    """
+    读取图像文件并返回字节数据，支持压缩选项
+
+    Args:
+        path: 图像文件路径
+        compress: 是否启用压缩 (默认: True)
+        quality: JPEG压缩质量 1-100 (默认: 85)
+        max_size: 最大尺寸 (width, height)，如果指定则会等比例缩放
+
+    Returns:
+        压缩后的图像字节数据
+    """
+    if not compress:
+        # 如果不压缩，直接返回原始字节
+        with open(path, "rb") as f:
+            return f.read()
+
+    try:
+        # 使用PIL打开图像
+        with Image.open(path) as img:
+            # 转换为RGB模式（确保兼容JPEG格式）
+            if img.mode in ("RGBA", "LA", "P"):
+                # 对于带透明度的图像，创建白色背景
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+
+            # 如果指定了最大尺寸，进行等比例缩放
+            if max_size is not None:
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+            # 压缩图像到内存
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=quality, optimize=True)
+            return buffer.getvalue()
+
+    except Exception as e:
+        # 如果PIL处理失败，回退到原始读取方式
+        log.warning(f"Failed to compress image {path}: {e}, falling back to original")
+        with open(path, "rb") as f:
+            return f.read()
 
 
 def _format_answer_bboxes(item: dict[str, Any]) -> list[dict[str, list[int]]]:
@@ -131,6 +181,9 @@ def convert(
     output_path: str,
     output_format: str = "parquet",
     limit: Optional[int] = None,
+    compress_images: bool = True,
+    image_quality: int = 85,
+    max_image_size: Optional[tuple[int, int]] = None,
 ) -> tuple[pd.DataFrame, list[Record]]:
     rows: list[Record] = []
     items = _read_jsonl(input_jsonl)
@@ -145,7 +198,12 @@ def convert(
             log.warning(f"[{idx}] Image path not found for item; skipping. keys={list(item.keys())}")
             continue
         try:
-            img_bytes = _read_image_bytes(img_path)
+            img_bytes = _read_image_bytes(
+                img_path,
+                compress=compress_images,
+                quality=image_quality,
+                max_size=max_image_size,
+            )
         except FileNotFoundError:
             log.warning(f"[{idx}] Image file missing: {img_path}; skipping.")
             continue
@@ -251,12 +309,24 @@ def main() -> None:
         return
 
     # Expected keys in the root of TOML:
-    # input, root, output, format, limit
+    # input, root, output, format, limit, compress_images, image_quality, max_image_size
     input_path = cfg.get("input", "data.jsonl")
     dataset_root = cfg.get("root", ".")
     output_path = cfg.get("output", "verl_dataset.parquet")
     output_format = cfg.get("format", "parquet")
     limit = cfg.get("limit", None)
+
+    # 图像压缩相关配置
+    compress_images = cfg.get("compress_images", True)
+    image_quality = cfg.get("image_quality", 85)
+    max_image_size = cfg.get("max_image_size", None)
+
+    # 如果max_image_size是列表，转换为元组
+    if isinstance(max_image_size, list) and len(max_image_size) == 2:
+        max_image_size = tuple(max_image_size)
+    elif max_image_size is not None:
+        log.warning(f"Invalid max_image_size format: {max_image_size}, ignoring")
+        max_image_size = None
 
     if not os.path.exists(input_path):
         log.error(f"Input file not found: {input_path}")
@@ -270,6 +340,9 @@ def main() -> None:
         output_path=output_path,
         output_format=output_format,
         limit=limit,
+        compress_images=compress_images,
+        image_quality=image_quality,
+        max_image_size=max_image_size,
     )
 
 
