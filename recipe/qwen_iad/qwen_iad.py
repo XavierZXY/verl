@@ -49,9 +49,7 @@ SYSTEM_PROMPT: str = (
     '4.  `<answer></answer>`: Conclude with "no".'
 )
 openai_api_key = "EMPTY"
-openai_api_base = os.environ.get(
-    "LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1"
-)
+openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
 
 client = OpenAI(
     api_key=openai_api_key,
@@ -67,13 +65,9 @@ if openai_api_base:
         if models.get("data"):
             model_name = models["data"][0]["id"]
         else:
-            logger.warning(
-                "No models found at the specified API base for reward scoring."
-            )
+            logger.warning("No models found at the specified API base for reward scoring.")
     except (requests.exceptions.RequestException, KeyError, IndexError) as e:
-        logger.warning(
-            f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled."
-        )
+        logger.warning(f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled.")
 
 
 class CustomRLHFDataset(RLHFDataset):
@@ -97,26 +91,19 @@ class CustomRLHFDataset(RLHFDataset):
         model_inputs = {}
 
         if self.processor is not None:
-            raw_prompt = self.processor.apply_chat_template(
-                messages, add_generation_prompt=True, tokenize=False
-            )
+            raw_prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
             multi_modal_data = {}
 
             images = None
             row_dict_images = row_dict.pop(self.image_key, None)
             if row_dict_images:
-                images = [
-                    Image.open(io.BytesIO(image["bytes"]))
-                    for image in row_dict_images
-                ]
+                images = [Image.open(io.BytesIO(image["bytes"])) for image in row_dict_images]
 
                 # due to the image key is "image" instead of "images" in vllm, we need to use "image" here
                 # link: https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205  # noqa: E501
                 multi_modal_data["image"] = images
 
-            model_inputs = self.processor(
-                text=[raw_prompt], images=images, return_tensors="pt"
-            )
+            model_inputs = self.processor(text=[raw_prompt], images=images, return_tensors="pt")
 
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
@@ -136,12 +123,8 @@ class CustomRLHFDataset(RLHFDataset):
                 row_dict["multi_modal_inputs"].pop("second_per_grid_ts", None)
 
         else:
-            raw_prompt = self.tokenizer.apply_chat_template(
-                messages, add_generation_prompt=True, tokenize=False
-            )
-            model_inputs = self.tokenizer(
-                raw_prompt, return_tensors="pt", add_special_tokens=False
-            )
+            raw_prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+            model_inputs = self.tokenizer(raw_prompt, return_tensors="pt", add_special_tokens=False)
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
 
@@ -154,11 +137,7 @@ class CustomRLHFDataset(RLHFDataset):
             truncation=self.truncation,
         )
 
-        if (
-            self.processor is not None
-            and "Qwen2VLImageProcessor"
-            in self.processor.image_processor.__class__.__name__
-        ):
+        if self.processor is not None and "Qwen2VLImageProcessor" in self.processor.image_processor.__class__.__name__:
             from verl.models.transformers.qwen2_vl import get_rope_index
 
             position_ids = [
@@ -179,9 +158,7 @@ class CustomRLHFDataset(RLHFDataset):
         row_dict["attention_mask"] = attention_mask[0]
         row_dict["position_ids"] = position_ids[0]
 
-        raw_prompt_ids = self.tokenizer.encode(
-            raw_prompt, add_special_tokens=False
-        )
+        raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
         if len(raw_prompt_ids) > self.max_prompt_length:
             if self.truncation == "left":
                 raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length :]
@@ -190,13 +167,9 @@ class CustomRLHFDataset(RLHFDataset):
             elif self.truncation == "middle":
                 left_half = self.max_prompt_length // 2
                 right_half = self.max_prompt_length - left_half
-                raw_prompt_ids = (
-                    raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
-                )
+                raw_prompt_ids = raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
             elif self.truncation == "error":
-                raise RuntimeError(
-                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
-                )
+                raise RuntimeError(f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}.")
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template
@@ -374,9 +347,7 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
         x2_inter = min(box1[2], box2[2])
         y2_inter = min(box1[3], box2[3])
 
-        inter_area = max(0.0, x2_inter - x1_inter) * max(
-            0.0, y2_inter - y1_inter
-        )
+        inter_area = max(0.0, x2_inter - x1_inter) * max(0.0, y2_inter - y1_inter)
 
         area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
         area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
@@ -444,9 +415,7 @@ def _extract_ground_truth_answer(ground_truth, extra_info):
     return (answer or "").strip()
 
 
-def compute_score(
-    data_source: str, solution_str: str, ground_truth: str, extra_info=None
-) -> float:
+def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_info=None) -> float:
     """
     Compute reward score for defect detection task.
 
@@ -474,11 +443,7 @@ def compute_score(
     if count_think_1 != count_think_2:
         is_format_error = True
 
-    predict_no_think = (
-        solution_str.split("</think>")[-1].strip()
-        if "</think>" in solution_str
-        else solution_str
-    )
+    predict_no_think = solution_str.split("</think>")[-1].strip() if "</think>" in solution_str else solution_str
 
     count_answer_1 = predict_no_think.count("<answer>")
     count_answer_2 = predict_no_think.count("</answer>")
@@ -514,9 +479,7 @@ def compute_score(
                 bbox_format_ok = all(
                     isinstance(item, dict)
                     and ("bbox2d" in item or "bbox_2d" in item)
-                    and isinstance(
-                        (item.get("bbox2d") or item.get("bbox_2d")), list
-                    )
+                    and isinstance((item.get("bbox2d") or item.get("bbox_2d")), list)
                     and len((item.get("bbox2d") or item.get("bbox_2d"))) == 4
                     for item in loc
                 )
@@ -528,9 +491,7 @@ def compute_score(
 
     # 2. Answer correctness using LLM judge
     if not client or not model_name:
-        logger.warning(
-            "Reward function client not initialized or model name not found."
-        )
+        logger.warning("Reward function client not initialized or model name not found.")
         return format_reward
 
     # Extract ground truth answer
@@ -595,18 +556,16 @@ def compute_score(
         gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
 
         # Compute IoU-based reward
-        bbox_iou_reward = _improved_iou_reward(
-            pred_boxes, gt_boxes, max_pred_boxes=3
-        )
+        bbox_iou_reward = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
 
         # Combine format and IoU rewards for bbox
-        bbox_reward = (
-            0.2 * (1.0 if bbox_format_ok else 0.0) + 0.8 * bbox_iou_reward
-        )
+        bbox_reward = 0.2 * (1.0 if bbox_format_ok else 0.0) + 0.8 * bbox_iou_reward
 
     # Final score calculation
     # Weights: format (0.3), answer accuracy (0.4), bbox (0.3)
-    final_score = 0.3 * format_reward + 0.4 * acc_reward + 0.3 * bbox_reward
+    # final_score = 0.3 * format_reward + 0.4 * acc_reward + 0.3 * bbox_reward
+    # final_score = 0.5 * format_reward + 0.5 * bbox_reward
+    final_score = 0.5 * format_reward + 0.5 * acc_reward
 
     # Log for debugging
     if extra_info:
@@ -615,7 +574,12 @@ def compute_score(
             f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
         )
 
-    return final_score
+    return {
+        "score": final_score,
+        "format_reward": format_reward,
+        "acc_reward": acc_reward,
+        "bbox_reward": bbox_reward,
+    }
 
 
 if __name__ == "__main__":
@@ -633,9 +597,7 @@ if __name__ == "__main__":
     import time
 
     time_start = time.time()
-    score = compute_score(
-        "common_reasoning", predict_str, ground_truth, extra_info
-    )
+    score = compute_score("common_reasoning", predict_str, ground_truth, extra_info)
     print(f"Score: {score}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
