@@ -1,0 +1,66 @@
+hydra:
+  searchpath:
+    - file://verl/trainer/config
+
+defaults:
+  - ppo_trainer
+  - _self_
+
+data:
+  max_prompt_length: 2048
+  max_response_length: 2048
+  train_batch_size: 128  # 减小batch size以降低梯度方差
+  return_raw_chat: True
+  return_multi_modal_inputs: False
+  custom_cls:
+    path: "recipe/qwen_iad/qwen_iad_improved.py"
+    name: CustomRLHFDataset
+
+actor_rollout_ref:
+  hybrid_engine: True
+  actor:
+    # 更激进的梯度裁剪
+    grad_clip: 0.3
+    # 降低学习率
+    optim:
+      lr: 3e-7
+      lr_warmup_steps_ratio: 0.1  # 添加warmup
+      weight_decay: 0.01
+      betas: [0.9, 0.999]
+    # 添加更多正则化
+    entropy_coeff: 0.01
+    use_kl_loss: true
+    kl_loss_coef: 0.01
+    
+  rollout:
+    name: vllm
+    # 降低温度以减少输出随机性
+    temperature: 0.7
+    multi_turn:
+      enable: False
+      max_assistant_turns: 5
+      tool_config_path: "recipe/qwen_iad/configs/image_zoom_in_tool_config.yaml"
+
+# 改进的奖励函数
+custom_reward_function:
+  path: "recipe/qwen_iad/qwen_iad_improved.py"
+  name: compute_score_improved
+
+# 算法配置调整
+algorithm:
+  # 使用GRPO但添加KL惩罚
+  adv_estimator: grpo
+  kl_ctrl:
+    kl_coef: 0.01
+    type: adaptive
+    target_kl: 0.05
+  # 添加奖励标准化
+  norm_adv_by_std_in_grpo: true
+
+# 训练器配置
+trainer:
+  # 更频繁的验证以监控训练稳定性
+  test_freq: 20
+  save_freq: 10
+  # 启用梯度监控
+  logger: ["console", "wandb", "tensorboard"]
