@@ -156,6 +156,48 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
     else:
         raise ValueError("All samples are aborted, this should not happen.")
 
+    # Add detailed reward component metrics if available
+    reward_component_metrics = {}
+
+    # Check for reward components in batch.batch (tensor format)
+    if "reward_components" in batch.batch:
+        reward_components = batch.batch["reward_components"]
+        for component_name, component_values in reward_components.items():
+            component_sequence_reward = component_values.sum(-1)
+            non_aborted_component_reward = component_sequence_reward[non_aborted_mask]
+            if non_aborted_component_reward.numel() > 0:
+                reward_component_metrics.update(
+                    {
+                        f"critic/rewards/{component_name}/mean": torch.mean(non_aborted_component_reward)
+                        .detach()
+                        .item(),
+                        f"critic/rewards/{component_name}/max": torch.max(non_aborted_component_reward).detach().item(),
+                        f"critic/rewards/{component_name}/min": torch.min(non_aborted_component_reward).detach().item(),
+                    }
+                )
+
+    # Check for reward components in non_tensor_batch (from reward function extra info)
+    reward_component_keys = ["format_reward", "acc_reward", "bbox_reward"]
+    for component_name in reward_component_keys:
+        if component_name in batch.non_tensor_batch:
+            component_values = batch.non_tensor_batch[component_name]
+            if isinstance(component_values, np.ndarray):
+                component_tensor = torch.from_numpy(component_values).float()
+            else:
+                component_tensor = torch.tensor(component_values).float()
+
+            non_aborted_component_reward = component_tensor[non_aborted_mask]
+            if non_aborted_component_reward.numel() > 0:
+                reward_component_metrics.update(
+                    {
+                        f"critic/rewards/{component_name}/mean": torch.mean(non_aborted_component_reward)
+                        .detach()
+                        .item(),
+                        f"critic/rewards/{component_name}/max": torch.max(non_aborted_component_reward).detach().item(),
+                        f"critic/rewards/{component_name}/min": torch.min(non_aborted_component_reward).detach().item(),
+                    }
+                )
+
     metrics = {
         # score
         "critic/score/mean": score_mean,
@@ -165,6 +207,8 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "critic/rewards/mean": reward_mean,
         "critic/rewards/max": reward_max,
         "critic/rewards/min": reward_min,
+        # detailed reward components
+        **reward_component_metrics,
         # adv
         "critic/advantages/mean": torch.mean(valid_adv).detach().item(),
         "critic/advantages/max": torch.max(valid_adv).detach().item(),
