@@ -634,14 +634,18 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     acc_reward_clipped = _clip_and_normalize_reward(acc_reward, min_val=0.0, max_val=1.0)
 
     # Weighted combination with smooth blending
-    raw_score = 0.4 * format_reward_clipped + 0.6 * acc_reward_clipped
+    raw_score = 0.4 * format_reward_clipped + 0.5 * acc_reward_clipped + 0.5 * bbox_reward
 
     # Apply final smoothing to prevent extreme gradients
-    final_score = _clip_and_normalize_reward(raw_score, min_val=-0.3, max_val=0.3)
+    final_score = _clip_and_normalize_reward(raw_score, min_val=-0.5, max_val=1.0)
 
     # Log for debugging
     if extra_info:
         logger.debug(
+            f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
+            f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
+        )
+        print(
             f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
             f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
         )
