@@ -15,8 +15,8 @@ SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
 # DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_dataset.parquet
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/singlecls/hazelnut.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test_compress.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/singlecls/hazelnut.parquet
+DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test_compress.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
@@ -29,14 +29,14 @@ LOG_PER_GPU_BATCH_SIZE=16
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
-N_ROLLOUT=8
+N_ROLLOUT=16
 GRAD_CLIP=1
-EXPERIMENT_NAME="hazelnut-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
+EXPERIMENT_NAME="imporved-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     --config-path=${BASEDIR}/recipe/qwen_iad/configs \
-    --config-name='qiad_multiturn_grpo' \
+    --config-name='qiad_multiturn_grpo_stable' \
     data.train_files=${DATASET_TRAIN} \
     data.val_files=[${DATASET_VAL}] \
     data.train_batch_size=${BATCH_SIZE} \

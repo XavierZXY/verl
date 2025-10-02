@@ -129,6 +129,6 @@ outputs
 
 # wandb key
 wandb_key
-
+swanlab_key
 # data toml config
 data/tools/mvtec/data.toml

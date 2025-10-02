@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import random
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Any, Optional
@@ -50,9 +51,30 @@ SYSTEM_PROMPT: str = (
     '3.  `<type></type>`: "good".'
     '4.  `<answer></answer>`: Conclude with "No. There is no defect detected.".'
 )
-INSTRUCTION_PROMPT: str = (
-    "<image>.\nAnalyze this  image for defects. If there is no defect, answer 'no'. If there is defect, answer 'yes'."
-)
+# Multiple instruction prompt variants for data diversity
+INSTRUCTION_PROMPTS: list[str] = [
+    "<image>.\nAnalyze this image for defects. If there is no defect, answer 'no'. If there is defect, answer 'yes'.",
+    "<image>.\nExamine this image carefully and determine whether any defects are present. Respond with 'no' if defect-free, 'yes' if defects are found.",
+    "<image>.\nInspect this image for any quality issues or anomalies. Answer 'no' for normal items, 'yes' for defective items.",
+    "<image>.\nPlease evaluate this image to identify any manufacturing defects. Reply 'no' if the item is good, 'yes' if there are defects.",
+    "<image>.\nLook at this image and assess whether there are any flaws or irregularities. Answer 'no' if perfect, 'yes' if imperfect.",
+    "<image>.\nReview this image for defect detection. Provide 'no' if the object appears normal, 'yes' if abnormalities are detected.",
+    "<image>.\nCheck this image for any signs of damage or defects. Respond 'no' for intact items, 'yes' for damaged items.",
+    "<image>.\nAnalyze the quality of the object in this image. Answer 'no' if it meets quality standards, 'yes' if it has defects.",
+    "<image>.\nExamine this image to determine if the item has any defects or quality issues. Reply 'no' if acceptable, 'yes' if unacceptable.",
+    "<image>.\nInspect this image and identify whether any defects are visible. Answer 'no' for defect-free objects, 'yes' for defective objects.",
+]
+
+
+def get_random_instruction_prompt() -> tuple[str, int]:
+    """
+    Get a random instruction prompt from the available variants.
+
+    Returns:
+        tuple: (selected_prompt, prompt_index)
+    """
+    prompt_index = random.randint(0, len(INSTRUCTION_PROMPTS) - 1)
+    return INSTRUCTION_PROMPTS[prompt_index], prompt_index
 
 
 @dataclass
@@ -211,9 +233,12 @@ def convert(
             log.warning(f"[{idx}] Failed to read image {img_path}: {e}; skipping.")
             continue
 
+        # Get random instruction prompt for data diversity
+        selected_instruction_prompt, prompt_index = get_random_instruction_prompt()
+
         prompt = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": INSTRUCTION_PROMPT},
+            {"role": "user", "content": selected_instruction_prompt},
         ]
         images = [{"bytes": img_bytes}]
 
@@ -222,7 +247,8 @@ def convert(
 
         extra_info = {
             "answer": reward_model["ground_truth"],
-            "question": INSTRUCTION_PROMPT,
+            "question": selected_instruction_prompt,
+            "prompt_variant_index": prompt_index,  # Track which prompt variant was used
             "clsname": item.get("clsname"),
             "label": item.get("label"),
             "type": item.get("label_name"),

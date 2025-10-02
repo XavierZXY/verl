@@ -13,6 +13,7 @@
 # limitations under the License.
 import io
 import logging
+import math
 import os
 import random
 import re
@@ -415,6 +416,76 @@ def _extract_ground_truth_answer(ground_truth, extra_info):
     return (answer or "").strip()
 
 
+def _smooth_format_reward(format_errors_count, total_checks=4):
+    """
+    Compute smooth format reward based on the number of format errors.
+
+    Args:
+        format_errors_count: Number of format errors detected
+        total_checks: Total number of format checks performed
+
+    Returns:
+        float: Smooth format reward in range [-0.5, 0.0]
+    """
+    if format_errors_count == 0:
+        return 0.0
+
+    # Use sigmoid-like function to smooth the penalty
+    error_ratio = format_errors_count / total_checks
+    # Map error ratio to smooth penalty using tanh
+    smooth_penalty = -0.5 * math.tanh(2.0 * error_ratio)
+    return smooth_penalty
+
+
+def _smooth_acc_reward(llm_response, confidence_threshold=0.8):
+    """
+    Compute smooth accuracy reward with confidence consideration.
+
+    Args:
+        llm_response: Response from LLM judge
+        confidence_threshold: Threshold for high confidence
+
+    Returns:
+        float: Smooth accuracy reward in range [0.0, 1.0]
+    """
+    if re.search(r"\bCORRECT\b", llm_response, re.IGNORECASE):
+        # Check for confidence indicators in the response
+        confidence_words = ["definitely", "clearly", "obviously", "certainly", "absolutely"]
+        uncertainty_words = ["maybe", "possibly", "might", "could", "uncertain", "unclear"]
+
+        confidence_score = 1.0
+        if any(word in llm_response.lower() for word in uncertainty_words):
+            confidence_score = 0.7
+        elif any(word in llm_response.lower() for word in confidence_words):
+            confidence_score = 1.0
+        else:
+            confidence_score = 0.85  # Default confidence for CORRECT
+
+        return confidence_score
+    elif re.search(r"\bINCORRECT\b", llm_response, re.IGNORECASE):
+        return 0.0
+    else:
+        # Ambiguous response gets low reward
+        return 0.1
+
+
+def _clip_and_normalize_reward(reward, min_val=-1.0, max_val=1.0):
+    """
+    Clip and normalize reward to prevent extreme values.
+
+    Args:
+        reward: Raw reward value
+        min_val: Minimum allowed value
+        max_val: Maximum allowed value
+
+    Returns:
+        float: Clipped and normalized reward
+    """
+    clipped = max(min_val, min(max_val, reward))
+    # Apply tanh for additional smoothing
+    return math.tanh(clipped)
+
+
 def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_info=None) -> float:
     """
     Compute reward score for defect detection task.
@@ -435,30 +506,30 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     """
     import json
 
-    is_format_error = False
+    format_errors_count = 0
 
-    # 1. Format checking - check all required tags
+    # 1. Format checking - check all required tags and count errors
     count_think_1 = solution_str.count("<think>")
     count_think_2 = solution_str.count("</think>")
     if count_think_1 != count_think_2:
-        is_format_error = True
+        format_errors_count += 1
 
     predict_no_think = solution_str.split("</think>")[-1].strip() if "</think>" in solution_str else solution_str
 
     count_answer_1 = predict_no_think.count("<answer>")
     count_answer_2 = predict_no_think.count("</answer>")
     if count_answer_1 != count_answer_2:
-        is_format_error = True
+        format_errors_count += 1
 
     count_location_1 = predict_no_think.count("<location>")
     count_location_2 = predict_no_think.count("</location>")
     if count_location_1 != count_location_2:
-        is_format_error = True
+        format_errors_count += 1
 
     count_type_1 = predict_no_think.count("<type>")
     count_type_2 = predict_no_think.count("</type>")
     if count_type_1 != count_type_2:
-        is_format_error = True
+        format_errors_count += 1
 
     # Extract components
     answer_text = extract_answer(predict_no_think)
@@ -467,7 +538,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
 
     # Check if answer exists
     if not answer_text:
-        is_format_error = True
+        format_errors_count += 1
         answer_text = ""
 
     # Check bbox format (3-box limit)
@@ -486,8 +557,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # Format reward: -1.0 if format error, 0.0 otherwise
-    format_reward = -1.0 if is_format_error else 0.0
+    # Smooth format reward based on error count
+    format_reward = _smooth_format_reward(format_errors_count, total_checks=5)
 
     # 2. Answer correctness using LLM judge
     if not client or not model_name:
@@ -501,8 +572,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Penalize excessively long answers
     if len(answer_text) >= 1000:
         acc_reward = 0.0
-        is_format_error = True
-        format_reward = -1.0
+        format_errors_count += 1
+        format_reward = _smooth_format_reward(format_errors_count, total_checks=5)
     elif not answer_text:
         acc_reward = 0.0
     else:
@@ -511,7 +582,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             "You are an expert evaluator for industrial defect detection. Your task is to determine if a model's "
             "answer is semantically equivalent to the standard answer.\n"
             "The answer should be 'yes' or 'no' (or variations like 'Yes. There has been a defect detected.').\n"
-            'You must provide your final judgement as a single word: either "CORRECT" or "INCORRECT".'
+            'You must provide your final judgement as a single word: either "CORRECT" or "INCORRECT". '
+            'You may also include confidence indicators like "definitely", "clearly", "possibly", etc.'
         )
 
         user_prompt = (
@@ -537,13 +609,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             )
             response = chat_response.choices[0].message.content.strip()
 
-            if re.search(r"\bCORRECT\b", response, re.IGNORECASE):
-                acc_reward = 1.0
-            elif re.search(r"\bINCORRECT\b", response, re.IGNORECASE):
-                acc_reward = 0.0
-            else:
-                logger.warning(f"LLM judge format error. Response: {response}")
-                acc_reward = 0.0
+            # Use smooth acc reward with confidence consideration
+            acc_reward = _smooth_acc_reward(response)
         except Exception as e:
             logger.warning(f"LLM judge request failed: {e}")
             acc_reward = 0.0
@@ -561,11 +628,16 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         # Combine format and IoU rewards for bbox
         bbox_reward = 0.2 * (1.0 if bbox_format_ok else 0.0) + 0.8 * bbox_iou_reward
 
-    # Final score calculation
-    # Weights: format (0.3), answer accuracy (0.4), bbox (0.3)
-    # final_score = 0.3 * format_reward + 0.4 * acc_reward + 0.3 * bbox_reward
-    # final_score = 0.5 * format_reward + 0.5 * bbox_reward
-    final_score = 0.5 * format_reward + 0.5 * acc_reward
+    # Final score calculation with smooth combination
+    # Apply clipping and normalization to individual rewards
+    format_reward_clipped = _clip_and_normalize_reward(format_reward, min_val=-0.5, max_val=0.0)
+    acc_reward_clipped = _clip_and_normalize_reward(acc_reward, min_val=0.0, max_val=1.0)
+
+    # Weighted combination with smooth blending
+    raw_score = 0.4 * format_reward_clipped + 0.6 * acc_reward_clipped
+
+    # Apply final smoothing to prevent extreme gradients
+    final_score = _clip_and_normalize_reward(raw_score, min_val=-0.3, max_val=0.3)
 
     # Log for debugging
     if extra_info:
