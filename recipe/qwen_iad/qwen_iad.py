@@ -630,14 +630,15 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
 
     # Final score calculation with smooth combination
     # Apply clipping and normalization to individual rewards
-    format_reward_clipped = _clip_and_normalize_reward(format_reward, min_val=-0.5, max_val=0.0)
+    format_reward_clipped = _clip_and_normalize_reward(format_reward, min_val=-0.5, max_val=1.0)
     acc_reward_clipped = _clip_and_normalize_reward(acc_reward, min_val=0.0, max_val=1.0)
 
     # Weighted combination with smooth blending
-    raw_score = 0.4 * format_reward_clipped + 0.5 * acc_reward_clipped + 0.5 * bbox_reward
+    # raw_score = 0.4 * format_reward_clipped + 0.5 * acc_reward_clipped + 0.5 * bbox_reward
+    raw_score = 0.5 * format_reward_clipped + 0.5 * acc_reward_clipped
 
     # Apply final smoothing to prevent extreme gradients
-    final_score = _clip_and_normalize_reward(raw_score, min_val=-0.5, max_val=1.0)
+    final_score = _clip_and_normalize_reward(raw_score, min_val=0.0, max_val=1.0)
 
     # Log for debugging
     if extra_info:
