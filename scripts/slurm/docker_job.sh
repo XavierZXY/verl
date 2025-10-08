@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=deepeyes_train      # 任务名称
-#SBATCH --partition=AIG_Models  # 分区名称
-#SBATCH --nodelist=tw011
+#SBATCH --job-name=Mvtec-300sample      # 任务名称
+#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
+#SBATCH --nodelist=tw006
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
@@ -10,6 +10,59 @@
 #SBATCH --time=8:00:00                 # 任务超时时间，根据训练时长调整
 #SBATCH --output=log/deepeyes_%j.out       # 输出日志文件
 #SBATCH --error=log/deepeyes_%j.err        # 错误日志文件
+
+# 设置容器名称
+CONTAINER_NAME="vllm-deep"
+
+# Cleanup function to stop and remove container
+cleanup() {
+    echo "=========================================================="
+    echo "执行清理操作..."
+    echo "清理时间 (Cleanup Time): $(date)"
+    
+    # Check if container is running and stop it
+    if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+        echo "正在停止容器 $CONTAINER_NAME..."
+        docker stop "$CONTAINER_NAME"
+        if [ $? -eq 0 ]; then
+            echo "容器 $CONTAINER_NAME 已成功停止。"
+        else
+            echo "警告：停止容器 $CONTAINER_NAME 时出现错误。"
+        fi
+    else
+        echo "容器 $CONTAINER_NAME 未在运行。"
+    fi
+    
+    # Optionally remove the container (uncomment if you want to remove it)
+    # if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+    #     echo "正在删除容器 $CONTAINER_NAME..."
+    #     docker rm "$CONTAINER_NAME"
+    #     if [ $? -eq 0 ]; then
+    #         echo "容器 $CONTAINER_NAME 已成功删除。"
+    #     else
+    #         echo "警告：删除容器 $CONTAINER_NAME 时出现错误。"
+    #     fi
+    # fi
+    
+    echo "清理操作完成。"
+    echo "=========================================================="
+}
+
+# Signal handler function
+handle_signal() {
+    echo ""
+    echo "=========================================================="
+    echo "收到终止信号，正在清理资源..."
+    echo "信号接收时间 (Signal Received Time): $(date)"
+    cleanup
+    exit 1
+}
+
+# Set up signal traps for SIGTERM and SIGINT
+trap handle_signal SIGTERM SIGINT
+
+# Also ensure cleanup runs on normal script exit
+trap cleanup EXIT
 
 # 打印任务信息
 echo "=========================================================="
@@ -20,9 +73,6 @@ echo "执行节点 (Execution Node): $(hostname)"
 echo "提交目录 (Submission Directory): $SLURM_SUBMIT_DIR"
 echo "开始时间 (Start Time): $(date)"
 echo "=========================================================="
-
-# 设置容器名称
-CONTAINER_NAME="vllm-deep"
 
 # Function to install required packages in container
 install_packages() {
@@ -82,6 +132,9 @@ if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
     fi
 else
     echo "容器 $CONTAINER_NAME 正在运行。"
+    # 重启容器
+    echo "正在重启容器 $CONTAINER_NAME..."
+    docker restart "$CONTAINER_NAME"
 fi
 
 echo "在容器 $CONTAINER_NAME 中执行训练脚本..."
@@ -90,15 +143,26 @@ echo "在容器 $CONTAINER_NAME 中执行训练脚本..."
 # 使用 /bin/bash -c 将多个命令串联起来
 # "&&" 确保只有前一个命令成功完成后，才会执行下一个命令
 docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_iad.sh"
+# docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_deepeyes.sh"
 
 # 检查上一个命令的退出状态
-if [ $? -eq 0 ]; then
+TRAINING_EXIT_CODE=$?
+if [ $TRAINING_EXIT_CODE -eq 0 ]; then
     echo "训练脚本成功完成。"
+    SCRIPT_SUCCESS=true
 else
-    echo "错误：训练脚本执行失败。"
+    echo "错误：训练脚本执行失败，退出码: $TRAINING_EXIT_CODE"
+    SCRIPT_SUCCESS=false
 fi
 
 echo "=========================================================="
 echo "任务结束时间 (End Time): $(date)"
-echo "DeepEyes训练任务完成。"
+if [ "$SCRIPT_SUCCESS" = true ]; then
+    echo "DeepEyes训练任务成功完成。"
+else
+    echo "DeepEyes训练任务执行失败。"
+fi
 echo "=========================================================="
+
+# Exit with the same code as the training script
+exit $TRAINING_EXIT_CODE

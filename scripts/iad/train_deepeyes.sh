@@ -2,34 +2,36 @@
 
 set -x
 
-export LLM_AS_A_JUDGE_BASE="http://10.21.238.101:9091/v1"
+export LLM_AS_A_JUDGE_BASE="http://10.21.239.89:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
+export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
 PROJECT_NAME="iad-grounding"
-EXPERIMENT_NAME="deepeyes_lr1e-6_ppo_batch32"
+EXPERIMENT_NAME="visa_tool-use"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # DATASET_TRAIN=${BASEDIR}/data/train.parquet
 # DATASET_VAL=${BASEDIR}/data/val.parquet
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_dataset.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/singlecls/grid.parquet
-# DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet
+# DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
+# DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
+DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/train/train.parquet
+# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_1024.parquet
+# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_8.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 PPO_EPOCHS=10
-BATCH_SIZE=32
-PPO_BATCH_SIZE=32
-MICRO_BATCH_SIZE=4
+BATCH_SIZE=8
+PPO_BATCH_SIZE=8
+MICRO_BATCH_SIZE=1
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=32
+LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
-N_ROLLOUT=16
+N_ROLLOUT=8
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     --config-path=${BASEDIR}/recipe/deepeyes/configs \
@@ -76,12 +78,12 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_parallel_calls=1 \
     actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/deepeyes/configs/image_zoom_in_tool_config.yaml \
     trainer.critic_warmup=0 \
-    trainer.logger=['console','wandb'] \
+    trainer.logger=['console','wandb','swanlab'] \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
     trainer.save_freq=20 \
-    trainer.test_freq=2 \
+    trainer.test_freq=20 \
     trainer.validation_data_dir=${BASEDIR}/logs/validation_data/${EXPERIMENT_NAME} \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \
