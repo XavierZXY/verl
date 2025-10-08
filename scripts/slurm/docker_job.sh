@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Mvtec-300sample      # 任务名称
-#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
-#SBATCH --nodelist=tw006
+#SBATCH --job-name=Mvtec-Test      # 任务名称
+#SBATCH --partition=AIG_Models  # 分区名称
+#SBATCH --nodelist=tw036
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
@@ -10,7 +10,7 @@
 #SBATCH --time=8:00:00                 # 任务超时时间，根据训练时长调整
 #SBATCH --output=log/deepeyes_%j.out       # 输出日志文件
 #SBATCH --error=log/deepeyes_%j.err        # 错误日志文件
-
+# Silo_Customer_Engineering
 # 设置容器名称
 CONTAINER_NAME="vllm-deep"
 

@@ -33,7 +33,7 @@ ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
-EXPERIMENT_NAME="Mvtex-300sample-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
+EXPERIMENT_NAME="Mvtex-300sample-reward-modify-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

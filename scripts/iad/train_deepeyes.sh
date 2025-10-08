@@ -6,19 +6,19 @@ export LLM_AS_A_JUDGE_BASE="http://10.21.239.89:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-grounding"
-EXPERIMENT_NAME="visa_tool-use"
+PROJECT_NAME="Deepeyes"
+EXPERIMENT_NAME="deepeyes-tool-use"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # DATASET_TRAIN=${BASEDIR}/data/train.parquet
 # DATASET_VAL=${BASEDIR}/data/val.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-# DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/train/train.parquet
+DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
+# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/train/train.parquet
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_1024.parquet
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_8.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet
+# DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
