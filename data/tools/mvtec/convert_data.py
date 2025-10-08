@@ -8,6 +8,13 @@ from io import BytesIO
 from typing import Any, Optional
 
 import pandas as pd
+
+# Import enhanced bbox processor
+from bbox.enhanced_bbox_processor import (
+    enhance_item_with_processed_bboxes,
+    format_bboxes_for_output,
+    get_top_n_bboxes_by_area,
+)
 from PIL import Image
 from rich.logging import RichHandler
 
@@ -168,21 +175,41 @@ def _read_image_bytes(
             return f.read()
 
 
-def _format_answer_bboxes(item: dict[str, Any]) -> list[dict[str, list[int]]]:
+def _format_answer_bboxes(item: dict[str, Any], max_bboxes: int = 3) -> list[dict[str, list[int]]]:
+    """
+    Format bounding boxes for answer, selecting top N by area and limiting to max_bboxes.
+
+    Args:
+        item: Dataset item containing bboxes
+        max_bboxes: Maximum number of bboxes to return (default: 3)
+
+    Returns:
+        List of formatted bbox dictionaries, limited to max_bboxes
+    """
     bboxes = item.get("bboxes")
     if not bboxes:
         return []
-    formatted: list[dict[str, list[int]]] = []
+
+    # Convert to tuples and validate
+    valid_bboxes = []
     for bbox in bboxes:
-        if not isinstance(bbox, list | tuple) or len(bbox) != 4:
+        if not isinstance(bbox, (list | tuple)) or len(bbox) != 4:
             continue
-        x1, y1, x2, y2 = bbox
         try:
-            formatted.append({"bbox_2d": [int(x1), int(y1), int(x2), int(y2)]})
+            x1, y1, x2, y2 = bbox
+            valid_bboxes.append((int(x1), int(y1), int(x2), int(y2)))
         except Exception:
             # Skip invalid numeric conversions
             continue
-    return formatted
+
+    if not valid_bboxes:
+        return []
+
+    # Get top N bboxes by area
+    top_bboxes = get_top_n_bboxes_by_area(valid_bboxes, max_bboxes)
+
+    # Format for output
+    return format_bboxes_for_output(top_bboxes)
 
 
 def _reward_model_value(item: dict[str, Any]) -> Any:
@@ -233,6 +260,9 @@ def convert(
             log.warning(f"[{idx}] Failed to read image {img_path}: {e}; skipping.")
             continue
 
+        # Process bboxes with image scaling consideration
+        enhanced_item = enhance_item_with_processed_bboxes(item, dataset_root, max_image_size, max_bboxes=3)
+
         # Get random instruction prompt for data diversity
         selected_instruction_prompt, prompt_index = get_random_instruction_prompt()
 
@@ -242,17 +272,18 @@ def convert(
         ]
         images = [{"bytes": img_bytes}]
 
-        reward_model = _reward_model_value(item)
-        bboxes_formatted = _format_answer_bboxes(item)
+        reward_model = _reward_model_value(enhanced_item)
+        bboxes_formatted = _format_answer_bboxes(enhanced_item)
 
         extra_info = {
             "answer": reward_model["ground_truth"],
             "question": selected_instruction_prompt,
             "prompt_variant_index": prompt_index,  # Track which prompt variant was used
-            "clsname": item.get("clsname"),
-            "label": item.get("label"),
-            "type": item.get("label_name"),
+            "clsname": enhanced_item.get("clsname"),
+            "label": enhanced_item.get("label"),
+            "type": enhanced_item.get("label_name"),
             "bboxes": bboxes_formatted,
+            "bbox_metadata": enhanced_item.get("bbox_metadata", {}),  # Include bbox processing metadata
         }
         # Add sequential index for rows that are actually written
         extra_info["index"] = write_index

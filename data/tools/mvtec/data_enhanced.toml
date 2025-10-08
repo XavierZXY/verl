@@ -1,0 +1,36 @@
+# Enhanced MVTec Data Conversion Configuration
+# This configuration demonstrates the new bbox processing features
+
+# Input and output paths
+input = "/home/zxy/codes/working/RL/verl/data/mvtec/train/train.jsonl"
+root = "/home/zxy/codes/working/RL/verl/data/mvtec"
+output = "enhanced_verl_dataset.parquet"
+format = "parquet"
+
+# Processing limits
+limit = 0  # Process only first 100 items for testing
+
+# Image compression settings
+compress_images = true
+image_quality = 85
+
+# NEW FEATURE: Image resizing with bbox adaptation
+# When max_image_size is set, images will be resized and bboxes will be automatically scaled
+# Format: [width, height]
+max_image_size = [1024, 1024]  # Resize images to max 1024x768, maintaining aspect ratio
+
+# The enhanced bbox processor will:
+# 1. Select only the 3 largest bboxes by area (as required by the prompt)
+# 2. Automatically scale bbox coordinates to match the resized image
+# 3. Provide metadata about the processing
+
+# Example of what happens:
+# Original image: 2048x1536 with bboxes [[494, 578, 635, 699], [1536, 804, 1639, 921], ...]
+# After processing: 1024x768 with scaled bboxes [[247, 289, 317, 349], [768, 402, 819, 460], ...]
+# Scale factors: x=0.5, y=0.5
+
+# Benefits:
+# - Consistent image sizes for training
+# - Properly scaled bbox coordinates
+# - Reduced dataset size due to image compression
+# - Only the most significant defects are kept (top 3 by area)
