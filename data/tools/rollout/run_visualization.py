@@ -18,8 +18,8 @@ def main():
 
     # Define paths
     test_data_path = "/home/zxy/codes/working/RL/verl/data/mvtec/test/test.jsonl"
-    rollout_data_path = "/home/zxy/codes/working/RL/verl/logs/rollout/validation/Mvtex-bbox-reward-visa-val-3B-lr1e-6-grad-clip1-batch16-ppo16-micro2-grpo/60.jsonl"
-    output_dir = "/home/zxy/codes/working/RL/verl/data/tools/rollout/visualization_results"
+    rollout_data_path = "/home/zxy/codes/working/RL/verl/logs/rollout/validation/mvtec/40.jsonl"
+    output_dir = "/home/zxy/codes/working/RL/verl/logs/rollout/validation/mvtec/img/40"
     mvtec_root = (
         "/data1/huggingface/hub/datasets--XimiaoZhang--MVTec-2K/snapshots/d52ff40b834d44cfcbea1fafc204666fc0da5b18"
     )
@@ -49,7 +49,7 @@ def main():
             test_jsonl_path=test_data_path,
             rollout_jsonl_path=rollout_data_path,
             output_dir=output_dir,
-            max_images=10,  # Limit for testing
+            # max_images=10,  # Limit for testing
         )
         print("Visualization completed successfully!")
 

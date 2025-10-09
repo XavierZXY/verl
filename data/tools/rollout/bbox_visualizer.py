@@ -23,7 +23,10 @@ class BboxVisualizer:
     Handles coordinate transformation from 1024x1024 resized images to original dimensions.
     """
 
-    def __init__(self, mvtec_data_root: str = "/home/zxy/codes/working/RL/verl/data/mvtec"):
+    def __init__(
+        self,
+        mvtec_data_root: str = "/home/zxy/codes/working/RL/verl/data/mvtec",
+    ):
         """
         Initialize the bbox visualizer.
 
@@ -132,7 +135,12 @@ class BboxVisualizer:
         # Transform coordinates
         x_min, y_min, x_max, y_max = bbox
 
-        transformed_bbox = [int(x_min * scale_x), int(y_min * scale_y), int(x_max * scale_x), int(y_max * scale_y)]
+        transformed_bbox = [
+            int(x_min * scale_x),
+            int(y_min * scale_y),
+            int(x_max * scale_x),
+            int(y_max * scale_y),
+        ]
 
         return transformed_bbox
 
@@ -174,14 +182,30 @@ class BboxVisualizer:
         for bbox in transformed_predicted:
             x_min, y_min, x_max, y_max = bbox
             cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)  # Red
-            cv2.putText(image, "Predicted", (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(
+                image,
+                "Predicted",
+                (x_min, y_min - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 0, 255),
+                2,
+            )
 
         # Draw ground truth bboxes in green (if provided)
         if ground_truth_bboxes:
             for bbox in ground_truth_bboxes:
                 x_min, y_min, x_max, y_max = bbox
                 cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)  # Green
-                cv2.putText(image, "Ground Truth", (x_min, y_min - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.putText(
+                    image,
+                    "Ground Truth",
+                    (x_min, y_min - 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (0, 255, 0),
+                    2,
+                )
 
         # Save output image if path is provided
         if output_path:
@@ -191,7 +215,11 @@ class BboxVisualizer:
         return image
 
     def visualize_rollout_results(
-        self, test_jsonl_path: str, rollout_jsonl_path: str, output_dir: str, max_images: int = None
+        self,
+        test_jsonl_path: str,
+        rollout_jsonl_path: str,
+        output_dir: str,
+        max_images: int = None,
     ):
         """
         Visualize rollout results by drawing bboxes on original images.
@@ -210,56 +238,63 @@ class BboxVisualizer:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Process each rollout result
-        processed_count = 0
+        # Build a mapping from test data index to rollout results
+        rollout_map = {}
         for i, result in enumerate(rollout_results):
+            rollout_map[i] = result
+
+        # Process each test data entry that has bboxes
+        processed_count = 0
+        test_entries = list(test_data.values())
+
+        for i, test_entry in enumerate(test_entries):
             if max_images and processed_count >= max_images:
                 break
 
-            # Extract predicted bboxes from output
-            predicted_bboxes = self.extract_bbox_from_output(result["output"])
+            # Get ground truth bboxes
+            ground_truth_bboxes = test_entry.get("bboxes", [])
 
-            # Skip if no predicted bboxes
-            if not predicted_bboxes:
+            # Skip if no ground truth bboxes
+            if not ground_truth_bboxes:
                 continue
 
-            # Find corresponding test data (assuming order matches)
-            if i < len(test_data):
-                # Get the i-th test data entry
-                test_entries = list(test_data.values())
-                if i < len(test_entries):
-                    test_entry = test_entries[i]
-                    filename = test_entry["filename"]
+            filename = test_entry["filename"]
 
-                    # Get ground truth bboxes if available
-                    ground_truth_bboxes = test_entry.get("bboxes", [])
+            # Extract predicted bboxes from rollout if available
+            predicted_bboxes = []
+            if i in rollout_map:
+                predicted_bboxes = self.extract_bbox_from_output(rollout_map[i]["output"])
 
-                    # Construct image path
-                    image_path = self.mvtec_data_root / filename
+            # Construct image path
+            image_path = self.mvtec_data_root / filename
 
-                    if image_path.exists():
-                        # Create output filename
-                        output_filename = f"{i:03d}_{Path(filename).stem}_visualization.jpg"
-                        output_path = output_dir / output_filename
+            if image_path.exists():
+                # Create output filename
+                output_filename = f"{i:03d}_{Path(filename).stem}_visualization.jpg"
+                output_path = output_dir / output_filename
 
-                        try:
-                            # Draw bboxes and save
-                            self.draw_bboxes_on_image(
-                                str(image_path), predicted_bboxes, ground_truth_bboxes, str(output_path)
-                            )
+                try:
+                    # Draw bboxes and save
+                    self.draw_bboxes_on_image(
+                        str(image_path),
+                        predicted_bboxes,
+                        ground_truth_bboxes,
+                        str(output_path),
+                    )
 
-                            print(f"Processed {processed_count + 1}: {filename}")
-                            print(f"  Predicted bboxes: {len(predicted_bboxes)}")
-                            print(f"  Ground truth bboxes: {len(ground_truth_bboxes)}")
-                            print(f"  Saved to: {output_path}")
-                            print()
+                    status = "with predictions" if predicted_bboxes else "ground truth only"
+                    print(f"Processed {processed_count + 1}: {filename} ({status})")
+                    print(f"  Predicted bboxes: {len(predicted_bboxes)}")
+                    print(f"  Ground truth bboxes: {len(ground_truth_bboxes)}")
+                    print(f"  Saved to: {output_path}")
+                    print()
 
-                            processed_count += 1
+                    processed_count += 1
 
-                        except Exception as e:
-                            print(f"Error processing {filename}: {e}")
-                    else:
-                        print(f"Image not found: {image_path}")
+                except Exception as e:
+                    print(f"Error processing {filename}: {e}")
+            else:
+                print(f"Image not found: {image_path}")
 
         print(f"Visualization complete! Processed {processed_count} images.")
         print(f"Results saved to: {output_dir}")
@@ -269,12 +304,27 @@ def main():
     """Main function to run the bbox visualizer."""
     parser = argparse.ArgumentParser(description="Visualize bounding boxes from rollout results")
     parser.add_argument("--test-data", required=True, help="Path to test.jsonl file")
-    parser.add_argument("--rollout-results", required=True, help="Path to rollout results JSONL file")
-    parser.add_argument("--output-dir", required=True, help="Output directory for visualization results")
     parser.add_argument(
-        "--mvtec-root", default="/home/zxy/codes/working/RL/verl/data/mvtec", help="Root directory of MVTec dataset"
+        "--rollout-results",
+        required=True,
+        help="Path to rollout results JSONL file",
     )
-    parser.add_argument("--max-images", type=int, default=None, help="Maximum number of images to process")
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Output directory for visualization results",
+    )
+    parser.add_argument(
+        "--mvtec-root",
+        default="/home/zxy/codes/working/RL/verl/data/mvtec",
+        help="Root directory of MVTec dataset",
+    )
+    parser.add_argument(
+        "--max-images",
+        type=int,
+        default=None,
+        help="Maximum number of images to process",
+    )
 
     args = parser.parse_args()
 
