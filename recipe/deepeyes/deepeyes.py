@@ -165,17 +165,11 @@ class CustomRLHFDataset(RLHFDataset):
 
         # add index for each prompt
         index = row_dict.get("extra_info", {}).get("index", 0)
-        tools_kwargs = {
-            "image_zoom_in_tool": {
-                "create_kwargs": {"image": images[0]},
-                # "execute_kwargs": {},
-                # "calc_reward_kwargs": {},
-                # "release_kwargs": {},
-            }
-        }
+
+        # For agent loop mode: pass image via multi_modal_data
+        # The agent loop will handle tool initialization with the image
         row_dict["index"] = index
-        row_dict["tools_kwargs"] = tools_kwargs
-        row_dict["agent_name"] = "tool_agent"
+        row_dict["agent_name"] = "deepeyes_agent"  # Use the new DeepEyes agent loop
         return row_dict
 
 
@@ -226,7 +220,9 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         # Strategy 2: If no <answer> tags, extract content after tool responses
         # Look for pattern: <tool_response>...</tool_response>assistant\n[actual_answer]
         tool_response_match = re.search(
-            r"</tool_response>\s*assistant\s*\n(.*?)$", predict_no_think, re.DOTALL | re.MULTILINE
+            r"</tool_response>\s*assistant\s*\n(.*?)$",
+            predict_no_think,
+            re.DOTALL | re.MULTILINE,
         )
         if tool_response_match:
             answer_text = tool_response_match.group(1).strip()
@@ -236,9 +232,17 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # Remove any remaining tool-related tags and extract meaningful content
                 remaining_content = predict_no_think
                 # Remove tool calls and responses
-                remaining_content = re.sub(r"<tool_call>.*?</tool_call>", "", remaining_content, flags=re.DOTALL)
                 remaining_content = re.sub(
-                    r"<tool_response>.*?</tool_response>", "", remaining_content, flags=re.DOTALL
+                    r"<tool_call>.*?</tool_call>",
+                    "",
+                    remaining_content,
+                    flags=re.DOTALL,
+                )
+                remaining_content = re.sub(
+                    r"<tool_response>.*?</tool_response>",
+                    "",
+                    remaining_content,
+                    flags=re.DOTALL,
                 )
                 # Remove user/assistant markers
                 remaining_content = re.sub(r"\b(user|assistant)\b", "", remaining_content)
@@ -399,7 +403,12 @@ The white van is visible in the lower section of the image, near the diagonal ro
     print(f"Ground truth: {problematic_ground_truth}")
 
     time_start = time.time()
-    score2 = compute_score("common_reasoning", problematic_solution, problematic_ground_truth, problematic_extra_info)
+    score2 = compute_score(
+        "common_reasoning",
+        problematic_solution,
+        problematic_ground_truth,
+        problematic_extra_info,
+    )
     print(f"Score: {score2}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
@@ -419,7 +428,10 @@ Zoomed in on the image to the region [226, 399, 265, 464] with label white van.
     print("\n=== Test Case 3: Well-formatted case ===")
     time_start = time.time()
     score3 = compute_score(
-        "common_reasoning", well_formatted_solution, problematic_ground_truth, problematic_extra_info
+        "common_reasoning",
+        well_formatted_solution,
+        problematic_ground_truth,
+        problematic_extra_info,
     )
     print(f"Score: {score3}")
     time_end = time.time()

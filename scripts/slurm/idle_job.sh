@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:8                   # GPU数量
 #SBATCH --mem=400G                     # 内存需求
 #SBATCH --exclusive                    # 独占节点
-#SBATCH --time=24:00:00                # 任务超时时间，设置为24小时
+#SBATCH --time=8:00:00                # 任务超时时间，设置为24小时
 #SBATCH --output=log/idle_%j.out       # 输出日志文件
 #SBATCH --error=log/idle_%j.err        # 错误日志文件
 
