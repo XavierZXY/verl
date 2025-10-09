@@ -2,13 +2,13 @@
 # This configuration demonstrates the new bbox processing features
 
 # Input and output paths
-input = "/home/zxy/codes/working/RL/verl/data/mvtec/train/train.jsonl"
-root = "/home/zxy/codes/working/RL/verl/data/mvtec"
-output = "enhanced_verl_dataset.parquet"
+root = "/home/takisobe@amd.com/zxy/data/VisA-2K"
+input = "/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/test/test.jsonl"
+output = "/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/test/test.parquet"
 format = "parquet"
 
 # Processing limits
-limit = 0  # Process only first 100 items for testing
+limit = 0 # Process only first 100 items for testing
 
 # Image compression settings
 compress_images = true
@@ -17,7 +17,10 @@ image_quality = 85
 # NEW FEATURE: Image resizing with bbox adaptation
 # When max_image_size is set, images will be resized and bboxes will be automatically scaled
 # Format: [width, height]
-max_image_size = [1024, 1024]  # Resize images to max 1024x768, maintaining aspect ratio
+max_image_size = [
+    1024,
+    1024,
+] # Resize images to max 1024x768, maintaining aspect ratio
 
 # The enhanced bbox processor will:
 # 1. Select only the 3 largest bboxes by area (as required by the prompt)

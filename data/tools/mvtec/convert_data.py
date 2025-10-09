@@ -358,7 +358,7 @@ def _load_config_from_toml(toml_path: str) -> dict[str, Any]:
 def main() -> None:
     # Load configuration from data.toml located next to this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    toml_path = os.path.join(script_dir, "data.toml")
+    toml_path = os.path.join(script_dir, "data_enhanced.toml")
     try:
         cfg = _load_config_from_toml(toml_path)
     except Exception as e:
