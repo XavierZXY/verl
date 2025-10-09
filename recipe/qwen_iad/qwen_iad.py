@@ -20,7 +20,7 @@ import re
 
 import requests
 from openai import OpenAI
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 import verl.utils.torch_functional as verl_F
 from verl.utils.dataset.rl_dataset import RLHFDataset
@@ -248,7 +248,7 @@ def _parse_predicted_bboxes(location_text):
         for item in loc:
             if isinstance(item, dict):
                 arr = item.get("bbox2d") or item.get("bbox_2d")
-                if isinstance(arr, (list, tuple)) and len(arr) == 4:
+                if isinstance(arr, (list | tuple)) and len(arr) == 4:
                     try:
                         boxes.append([float(v) for v in arr])
                     except Exception:
@@ -551,7 +551,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                     isinstance(item, dict)
                     and ("bbox2d" in item or "bbox_2d" in item)
                     and isinstance((item.get("bbox2d") or item.get("bbox_2d")), list)
-                    and len((item.get("bbox2d") or item.get("bbox_2d"))) == 4
+                    and len(item.get("bbox2d") or item.get("bbox_2d")) == 4
                     for item in loc
                 )
         except (json.JSONDecodeError, TypeError):
@@ -657,6 +657,160 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         "acc_reward": acc_reward,
         "bbox_reward": bbox_reward,
     }
+
+
+def draw_bboxes_on_image(image, pred_boxes, gt_boxes, save_path, sample_id="sample"):
+    """
+    Draw predicted and ground truth bboxes on image and save to file.
+
+    Args:
+        image: PIL Image object
+        pred_boxes: List of predicted bboxes in format [[x1,y1,x2,y2], ...]
+        gt_boxes: List of ground truth bboxes in format [[x1,y1,x2,y2], ...]
+        save_path: Directory path to save the image
+        sample_id: Unique identifier for the sample
+
+    Returns:
+        str: Path to the saved image file
+    """
+    try:
+        # Create a copy of the image to avoid modifying the original
+        img_copy = image.copy()
+        draw = ImageDraw.Draw(img_copy)
+
+        # Try to load a font, fallback to default if not available
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
+        except OSError:
+            try:
+                font = ImageFont.load_default()
+            except Exception:
+                font = None
+
+        # Draw ground truth boxes in green
+        for i, gt_box in enumerate(gt_boxes):
+            x1, y1, x2, y2 = gt_box
+            # Draw rectangle
+            draw.rectangle([x1, y1, x2, y2], outline="green", width=3)
+            # Draw label
+            label = f"GT_{i + 1}"
+            if font:
+                draw.text((x1, y1 - 20), label, fill="green", font=font)
+            else:
+                draw.text((x1, y1 - 15), label, fill="green")
+
+        # Draw predicted boxes in red
+        for i, pred_box in enumerate(pred_boxes):
+            x1, y1, x2, y2 = pred_box
+            # Draw rectangle
+            draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+            # Draw label
+            label = f"PRED_{i + 1}"
+            if font:
+                draw.text((x1, y1 - 40), label, fill="red", font=font)
+            else:
+                draw.text((x1, y1 - 30), label, fill="red")
+
+        # Create save directory if it doesn't exist
+        os.makedirs(save_path, exist_ok=True)
+
+        # Save the image
+        filename = f"{sample_id}_bbox_visualization.jpg"
+        full_path = os.path.join(save_path, filename)
+        img_copy.save(full_path, "JPEG", quality=95)
+
+        logger.info(f"Saved bbox visualization to {full_path}")
+        return full_path
+
+    except Exception as e:
+        logger.error(f"Failed to draw bboxes on image: {e}")
+        return None
+
+
+def save_validation_images_with_bboxes(batch_data, outputs, save_dir, global_step):
+    """
+    Save validation images with predicted and ground truth bboxes drawn.
+
+    Args:
+        batch_data: Batch data containing images and ground truth information
+        outputs: Model outputs containing predicted bboxes
+        save_dir: Directory to save the visualization images
+        global_step: Current training step for organizing saved files
+
+    Returns:
+        List of saved image paths
+    """
+    saved_paths = []
+
+    try:
+        # Create step-specific directory
+        step_dir = os.path.join(save_dir, f"step_{global_step}")
+        os.makedirs(step_dir, exist_ok=True)
+
+        # Process each sample in the batch
+        for i, (sample_data, output_text) in enumerate(zip(batch_data, outputs, strict=False)):
+            try:
+                # Extract image from sample data
+                image = None
+                if hasattr(sample_data, "non_tensor_batch") and "multi_modal_data" in sample_data.non_tensor_batch:
+                    multi_modal_data = sample_data.non_tensor_batch["multi_modal_data"]
+                    if "image" in multi_modal_data and multi_modal_data["image"]:
+                        image = multi_modal_data["image"][0]  # Get first image
+                elif hasattr(sample_data, "batch") and "multi_modal_data" in sample_data.batch:
+                    multi_modal_data = sample_data.batch["multi_modal_data"]
+                    if "image" in multi_modal_data and multi_modal_data["image"]:
+                        image = multi_modal_data["image"][0]
+
+                if image is None:
+                    logger.warning(f"No image found for sample {i}")
+                    continue
+
+                # Extract predicted bboxes from output text
+                location_text = extract_location(output_text)
+                pred_boxes = _parse_predicted_bboxes(location_text)
+
+                # Extract ground truth bboxes
+                ground_truth = None
+                extra_info = None
+
+                if hasattr(sample_data, "non_tensor_batch"):
+                    if "reward_model" in sample_data.non_tensor_batch:
+                        reward_model_data = sample_data.non_tensor_batch["reward_model"]
+                        if isinstance(reward_model_data, dict):
+                            ground_truth = reward_model_data.get("ground_truth")
+                        elif hasattr(reward_model_data, "get"):
+                            ground_truth = reward_model_data.get("ground_truth")
+
+                    if "extra_info" in sample_data.non_tensor_batch:
+                        extra_info = sample_data.non_tensor_batch["extra_info"]
+
+                gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
+
+                # Create unique sample ID
+                sample_id = f"sample_{i:04d}"
+                if hasattr(sample_data, "non_tensor_batch") and "uid" in sample_data.non_tensor_batch:
+                    uid = sample_data.non_tensor_batch["uid"]
+                    if isinstance(uid, (list | tuple)) and len(uid) > 0:
+                        sample_id = f"uid_{uid[0]}"
+                    elif isinstance(uid, str):
+                        sample_id = f"uid_{uid}"
+
+                # Draw bboxes and save image
+                saved_path = draw_bboxes_on_image(
+                    image=image, pred_boxes=pred_boxes, gt_boxes=gt_boxes, save_path=step_dir, sample_id=sample_id
+                )
+
+                if saved_path:
+                    saved_paths.append(saved_path)
+
+            except Exception as e:
+                logger.error(f"Failed to process sample {i}: {e}")
+                continue
+
+    except Exception as e:
+        logger.error(f"Failed to save validation images with bboxes: {e}")
+
+    return saved_paths
 
 
 if __name__ == "__main__":

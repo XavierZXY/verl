@@ -47,6 +47,132 @@ def reduce_metrics(metrics: dict[str, list[Any]]) -> dict[str, Any]:
     return reduce_metrics(metrics)
 
 
+def compute_bbox_visualization_metrics(batch: DataProto, outputs: list[str]) -> dict[str, Any]:
+    """
+    Compute metrics related to bbox visualization for validation.
+
+    This function analyzes the predicted bboxes and ground truth bboxes to provide
+    statistics about the detection performance and visualization quality.
+
+    Args:
+        batch: A DataProto object containing batch data with ground truth bbox information
+        outputs: List of model output strings containing predicted bbox information
+
+    Returns:
+        A dictionary containing bbox-related metrics:
+            - bbox_vis/num_samples_with_images: Number of samples that have images
+            - bbox_vis/num_samples_with_pred_boxes: Number of samples with predicted bboxes
+            - bbox_vis/num_samples_with_gt_boxes: Number of samples with ground truth bboxes
+            - bbox_vis/avg_pred_boxes_per_sample: Average number of predicted boxes per sample
+            - bbox_vis/avg_gt_boxes_per_sample: Average number of ground truth boxes per sample
+            - bbox_vis/samples_with_both_pred_and_gt: Number of samples with both pred and GT boxes
+    """
+    try:
+        # Import bbox parsing functions
+        from recipe.qwen_iad.qwen_iad import _extract_gt_bboxes, _parse_predicted_bboxes, extract_location
+
+        num_samples_with_images = 0
+        num_samples_with_pred_boxes = 0
+        num_samples_with_gt_boxes = 0
+        total_pred_boxes = 0
+        total_gt_boxes = 0
+        samples_with_both_pred_and_gt = 0
+
+        # Process each sample in the batch
+        for i, (sample_data, output_text) in enumerate(zip(batch, outputs, strict=False)):
+            # Check if sample has image
+            has_image = False
+            if hasattr(sample_data, "non_tensor_batch") and "multi_modal_data" in sample_data.non_tensor_batch:
+                multi_modal_data = sample_data.non_tensor_batch["multi_modal_data"]
+                if "image" in multi_modal_data and multi_modal_data["image"]:
+                    has_image = True
+                    num_samples_with_images += 1
+            elif hasattr(sample_data, "batch") and "multi_modal_data" in sample_data.batch:
+                multi_modal_data = sample_data.batch["multi_modal_data"]
+                if "image" in multi_modal_data and multi_modal_data["image"]:
+                    has_image = True
+                    num_samples_with_images += 1
+
+            if not has_image:
+                continue
+
+            # Extract predicted bboxes
+            location_text = extract_location(output_text)
+            pred_boxes = _parse_predicted_bboxes(location_text)
+
+            # Extract ground truth bboxes
+            ground_truth = None
+            extra_info = None
+
+            if hasattr(sample_data, "non_tensor_batch"):
+                if "reward_model" in sample_data.non_tensor_batch:
+                    reward_model_data = sample_data.non_tensor_batch["reward_model"]
+                    if isinstance(reward_model_data, dict):
+                        ground_truth = reward_model_data.get("ground_truth")
+                    elif hasattr(reward_model_data, "get"):
+                        ground_truth = reward_model_data.get("ground_truth")
+
+                if "extra_info" in sample_data.non_tensor_batch:
+                    extra_info = sample_data.non_tensor_batch["extra_info"]
+
+            gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
+
+            # Update statistics
+            if pred_boxes:
+                num_samples_with_pred_boxes += 1
+                total_pred_boxes += len(pred_boxes)
+
+            if gt_boxes:
+                num_samples_with_gt_boxes += 1
+                total_gt_boxes += len(gt_boxes)
+
+            if pred_boxes and gt_boxes:
+                samples_with_both_pred_and_gt += 1
+
+        # Calculate averages
+        avg_pred_boxes_per_sample = total_pred_boxes / max(num_samples_with_images, 1)
+        avg_gt_boxes_per_sample = total_gt_boxes / max(num_samples_with_images, 1)
+
+        return {
+            "bbox_vis/num_samples_with_images": num_samples_with_images,
+            "bbox_vis/num_samples_with_pred_boxes": num_samples_with_pred_boxes,
+            "bbox_vis/num_samples_with_gt_boxes": num_samples_with_gt_boxes,
+            "bbox_vis/avg_pred_boxes_per_sample": avg_pred_boxes_per_sample,
+            "bbox_vis/avg_gt_boxes_per_sample": avg_gt_boxes_per_sample,
+            "bbox_vis/samples_with_both_pred_and_gt": samples_with_both_pred_and_gt,
+            "bbox_vis/pred_box_detection_rate": num_samples_with_pred_boxes / max(num_samples_with_images, 1),
+            "bbox_vis/gt_box_coverage_rate": num_samples_with_gt_boxes / max(num_samples_with_images, 1),
+        }
+
+    except ImportError:
+        # If bbox parsing functions are not available, return empty metrics
+        return {}
+    except Exception as e:
+        # Log error and return empty metrics
+        print(f"Warning: Failed to compute bbox visualization metrics: {e}")
+        return {}
+
+
+def log_bbox_visualization_summary(saved_paths: list[str], save_dir: str, global_step: int) -> dict[str, Any]:
+    """
+    Create a summary of bbox visualization results.
+
+    Args:
+        saved_paths: List of paths to saved visualization images
+        save_dir: Directory where visualizations were saved
+        global_step: Current training step
+
+    Returns:
+        Dictionary with visualization summary metrics
+    """
+    return {
+        "bbox_vis/num_images_saved": len(saved_paths),
+        "bbox_vis/save_directory": save_dir,
+        "bbox_vis/global_step": global_step,
+        "bbox_vis/visualization_enabled": len(saved_paths) > 0,
+    }
+
+
 def _compute_response_info(batch: DataProto) -> dict[str, Any]:
     """
     Computes information about prompts and responses from a batch.

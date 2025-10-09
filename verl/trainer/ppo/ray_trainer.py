@@ -527,6 +527,10 @@ class RayPPOTrainer:
         sample_turns = []
         sample_uids = []
 
+        # Lists to collect data for bbox visualization
+        validation_batch_data = []
+        validation_outputs = []
+
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
 
@@ -592,6 +596,10 @@ class RayPPOTrainer:
             test_batch = test_batch.union(test_output_gen_batch)
             test_batch.meta_info["validate"] = True
 
+            # Store batch data and outputs for bbox visualization
+            validation_batch_data.extend(test_batch)
+            validation_outputs.extend(output_texts)
+
             # evaluate using reward_function
             if self.val_reward_fn is None:
                 raise ValueError("val_reward_fn must be provided for validation.")
@@ -627,6 +635,35 @@ class RayPPOTrainer:
                 dump_path=val_data_dir,
             )
 
+        # Save validation images with bbox visualization
+        rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
+        saved_bbox_paths = []  # Store saved paths for later use
+        if rollout_data_dir and validation_batch_data and validation_outputs:
+            try:
+                # Import the visualization function
+                from recipe.qwen_iad.qwen_iad import save_validation_images_with_bboxes
+
+                # Create bbox visualization directory
+                bbox_vis_dir = os.path.join(rollout_data_dir, "bbox_visualizations")
+
+                # Save images with bboxes
+                saved_bbox_paths = save_validation_images_with_bboxes(
+                    batch_data=validation_batch_data,
+                    outputs=validation_outputs,
+                    save_dir=bbox_vis_dir,
+                    global_step=self.global_steps,
+                )
+
+                if saved_bbox_paths:
+                    print(f"Saved {len(saved_bbox_paths)} bbox visualization images to {bbox_vis_dir}")
+                else:
+                    print("No bbox visualization images were saved")
+
+            except ImportError as e:
+                print(f"Warning: Could not import bbox visualization function: {e}")
+            except Exception as e:
+                print(f"Warning: Failed to save bbox visualizations: {e}")
+
         for key_info, lst in reward_extra_infos_dict.items():
             assert len(lst) == 0 or len(lst) == len(sample_scores), f"{key_info}: {len(lst)=}, {len(sample_scores)=}"
 
@@ -649,6 +686,28 @@ class RayPPOTrainer:
                         metric_sec = "val-aux"
                     pfx = f"{metric_sec}/{data_source}/{var_name}/{metric_name}"
                     metric_dict[pfx] = metric_val
+
+        # Add bbox visualization metrics after metric_dict is created
+        if saved_bbox_paths and validation_batch_data and validation_outputs:
+            try:
+                from verl.trainer.ppo.metric_utils import (
+                    compute_bbox_visualization_metrics,
+                    log_bbox_visualization_summary,
+                )
+
+                # Add bbox visualization metrics
+                bbox_metrics = compute_bbox_visualization_metrics(validation_batch_data, validation_outputs)
+                metric_dict.update(bbox_metrics)
+
+                # Add visualization summary metrics
+                bbox_vis_dir = os.path.join(rollout_data_dir, "bbox_visualizations")
+                vis_summary = log_bbox_visualization_summary(saved_bbox_paths, bbox_vis_dir, self.global_steps)
+                metric_dict.update(vis_summary)
+
+            except ImportError as e:
+                print(f"Warning: Could not import bbox visualization metrics: {e}")
+            except Exception as e:
+                print(f"Warning: Failed to compute bbox visualization metrics: {e}")
 
         if len(sample_turns) > 0:
             sample_turns = np.concatenate(sample_turns)
