@@ -3,6 +3,6 @@ repos:
     rev: "v0.12.2"
     hooks:
       - id: ruff
-        args: ["--fix", "--show-fixes", "--output-format=full"]
+        args: ["--fix", "--show-fixes", "--output-format=full", "--line-length=300"]
         exclude: ^.*\.(ipynb)$
       - id: ruff-format
