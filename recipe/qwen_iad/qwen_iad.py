@@ -35,7 +35,9 @@ SYSTEM_PROMPT: str = (
     "**If you detect one or more defects:**"
     "Your response MUST be structured with the following four tags in this exact order:"
     "1.  `<think></think>`: Provide a step-by-step reasoning process. Describe the visual "
-    'characteristics of the anomaly (e.g., "I observe a dark, irregular crack on the upper left surface...").'
+    'characteristics of the anomaly (e.g., "I observe a dark, irregular crack on the upper left surface..."). '
+    "You may use tools to zoom in on specific regions if needed. "
+    "Tool calls should be placed within <tool_call></tool_call> tags, and tool responses will be in <tool_response></tool_response> tags."
     "2.  `<location></location>`: Provide a JSON list of all detected defect locations.Notice! You should give the location of the only defects not the full object."
     ' Each item in the list must be a JSON object with a "bbox2d" key and coordinates in `[x_min, y_min, x_max, y_max]` format. '
     'For example: `[{"bbox2d": [100, 150, 200, 250]}, {"bbox2d": [300, 350, 400, 450]}]`.Do not give more than 3 bounding boxes. If you are uncertain about the exact location, '
@@ -416,6 +418,33 @@ def _extract_ground_truth_answer(ground_truth, extra_info):
     return (answer or "").strip()
 
 
+def _validate_tool_call_json(solution_str):
+    """
+    Validate that tool_call tags contain valid JSON.
+
+    Args:
+        solution_str: The solution string to check
+
+    Returns:
+        bool: True if all tool_call contents are valid JSON (or no tool_calls), False otherwise
+    """
+    import json
+
+    tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
+    tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
+
+    if not tool_calls:
+        return True  # No tool calls is valid
+
+    for tool_call_content in tool_calls:
+        try:
+            json.loads(tool_call_content.strip())
+        except (json.JSONDecodeError, ValueError):
+            return False
+
+    return True
+
+
 def _smooth_format_reward(format_errors_count, total_checks=4):
     """
     Compute smooth format reward based on the number of format errors.
@@ -544,6 +573,21 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     if count_type_1 != count_type_2:
         format_errors_count += 1
 
+    # Check tool call format tags (if present)
+    count_tool_call_1 = solution_str.count("<tool_call>")
+    count_tool_call_2 = solution_str.count("</tool_call>")
+    if count_tool_call_1 != count_tool_call_2:
+        format_errors_count += 1
+
+    count_tool_response_1 = solution_str.count("<tool_response>")
+    count_tool_response_2 = solution_str.count("</tool_response>")
+    if count_tool_response_1 != count_tool_response_2:
+        format_errors_count += 1
+
+    # Validate tool call JSON format (if tool calls are present)
+    if count_tool_call_1 > 0 and not _validate_tool_call_json(solution_str):
+        format_errors_count += 1
+
     # Extract components
     answer_text = extract_answer(predict_no_think)
     location_text = extract_location(predict_no_think)
@@ -571,7 +615,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             pass
 
     # Smooth format reward based on error count
-    format_reward = _smooth_format_reward(format_errors_count, total_checks=5)
+    # Total checks: think, answer, location, type, tool_call, tool_response tags + answer existence + tool_call JSON validation
+    format_reward = _smooth_format_reward(format_errors_count, total_checks=8)
 
     # 2. Answer correctness using LLM judge
     if not client or not model_name:
@@ -586,7 +631,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     if len(answer_text) >= 1000:
         acc_reward = 0.0
         format_errors_count += 1
-        format_reward = _smooth_format_reward(format_errors_count, total_checks=5)
+        format_reward = _smooth_format_reward(format_errors_count, total_checks=8)
     elif not answer_text:
         acc_reward = 0.0
     else:
@@ -649,19 +694,25 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Weighted combination with smooth blending
     raw_score = 0.5 * format_reward + 0.5 * acc_reward + 0.5 * bbox_reward
     # raw_score = 0.5 * format_reward + 0.5 * acc_reward
+    
+    
 
     # Apply final smoothing to prevent extreme gradients
     final_score = _clip_and_normalize_reward(raw_score, min_val=-0.5, max_val=1.0)
 
     # Log for debugging
     if extra_info:
+        has_tool_calls = count_tool_call_1 > 0
+        tool_call_valid = _validate_tool_call_json(solution_str) if has_tool_calls else True
         logger.debug(
             f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-            f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
+            f"bbox={bbox_reward:.2f}, final={final_score:.2f}, "
+            f"format_errors={format_errors_count}, has_tools={has_tool_calls}, tool_json_valid={tool_call_valid}"
         )
         print(
             f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-            f"bbox={bbox_reward:.2f}, final={final_score:.2f}"
+            f"bbox={bbox_reward:.2f}, final={final_score:.2f}, "
+            f"format_errors={format_errors_count}, has_tools={has_tool_calls}, tool_json_valid={tool_call_valid}"
         )
 
     return {
@@ -673,75 +724,90 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
 
 
 if __name__ == "__main__":
-    # Test case 1: Original test case
-    predict_str = "The answer is 2 + 2 = 4 </think> <answer> right </answer> <answer> left </answer>"
-    ground_truth = "left"
-    extra_info = {
-        "answer": "The woman is to the left of the man who is holding the camera.",
-        "id": 0,
-        "image": "/cpfs/user/honglingyi/DATA/LLM/Vstar/gqa/images/713270.jpg",
-        "pred_ans": "The woman is to the right of the man who is holding the camera.",
-        "question": "Is the woman to the left or to the right of the man who is holding the camera?",
-    }
-    print("=== Test Case 1: Original test ===")
     import time
 
+    # Test case 1: Well-formatted response with valid tool calls
+    test_case_1 = """<think>
+I need to examine the image carefully for any defects. Let me zoom in on a specific region.
+</think>
+<tool_call>
+{"name": "image_zoom_in_tool", "arguments": {"bbox_2d": [100, 150, 200, 250], "label": "surface area"}}
+</tool_call>
+<tool_response>
+Zoomed in on the image to the region [100, 150, 200, 250] with label surface area.
+</tool_response>
+<location>[{"bbox2d": [105, 155, 195, 245]}]</location>
+<type>crack</type>
+<answer>yes</answer>"""
+
+    ground_truth_1 = {"answer": "yes", "bboxes": [{"bbox2d": [100, 150, 200, 250]}]}
+    extra_info_1 = {
+        "question": "Does this image contain any defects?",
+        "bboxes": [{"bbox2d": [100, 150, 200, 250]}],
+    }
+
+    print("=== Test Case 1: Well-formatted with valid tool calls ===")
     time_start = time.time()
-    score = compute_score("common_reasoning", predict_str, ground_truth, extra_info)
+    score = compute_score("defect_detection", test_case_1, ground_truth_1, extra_info_1)
     print(f"Score: {score}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
 
-    # Test case 2: Problematic case mentioned by user
-    problematic_solution = """<tool_call>
-{"name": "image_zoom_in_tool", "arguments": {"bbox_2d": [226, 399, 265, 464], "label": "white van"}}
-</tool_call>user
-<tool_response>
-Zoomed in on the image to the region [226, 399, 265, 464] with label white van.
-</tool_response>
-assistant
-The white van is visible in the lower section of the image, near the diagonal road."""
+    # Test case 2: Mismatched tool call tags
+    test_case_2 = """<think>
+I need to examine the image.
+</think>
+<tool_call>
+{"name": "image_zoom_in_tool", "arguments": {"bbox_2d": [100, 150, 200, 250]}}
+<location>[]</location>
+<type>good</type>
+<answer>no</answer>"""
 
-    problematic_ground_truth = "Yes, the white van is indeed situated in the bottom part of the picture."
-    problematic_extra_info = {
-        "question": "Is the white van in the bottom part of the picture?",
+    ground_truth_2 = {"answer": "no", "bboxes": []}
+    extra_info_2 = {
+        "question": "Does this image contain any defects?",
+        "bboxes": [],
     }
 
-    print("\n=== Test Case 2: Problematic case (no answer tags) ===")
-    print(f"Solution: {problematic_solution}")
-    print(f"Ground truth: {problematic_ground_truth}")
-
+    print("\n=== Test Case 2: Mismatched tool call tags (missing </tool_call>) ===")
     time_start = time.time()
-    score2 = compute_score(
-        "common_reasoning",
-        problematic_solution,
-        problematic_ground_truth,
-        problematic_extra_info,
-    )
+    score2 = compute_score("defect_detection", test_case_2, ground_truth_2, extra_info_2)
     print(f"Score: {score2}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
 
-    # Test case 3: Well-formatted case with tools
-    well_formatted_solution = """<think>
-I need to use the image zoom tool to get a better look at the specific area.
+    # Test case 3: Invalid JSON in tool call
+    test_case_3 = """<think>
+Let me check for defects.
 </think>
 <tool_call>
-{"name": "image_zoom_in_tool", "arguments": {"bbox_2d": [226, 399, 265, 464], "label": "white van"}}
+{name: "image_zoom_in_tool", arguments: {bbox_2d: [100, 150, 200, 250]}}
 </tool_call>
 <tool_response>
-Zoomed in on the image to the region [226, 399, 265, 464] with label white van.
+Zoomed in successfully.
 </tool_response>
-<answer>Yes, the white van is indeed situated in the bottom part of the picture.</answer>"""
+<location>[]</location>
+<type>good</type>
+<answer>no</answer>"""
 
-    print("\n=== Test Case 3: Well-formatted case ===")
+    print("\n=== Test Case 3: Invalid JSON in tool call (no quotes) ===")
     time_start = time.time()
-    score3 = compute_score(
-        "common_reasoning",
-        well_formatted_solution,
-        problematic_ground_truth,
-        problematic_extra_info,
-    )
+    score3 = compute_score("defect_detection", test_case_3, ground_truth_2, extra_info_2)
     print(f"Score: {score3}")
+    time_end = time.time()
+    print(f"Time: {time_end - time_start}")
+
+    # Test case 4: No tool calls (valid case)
+    test_case_4 = """<think>
+After examining the image, I can see the surface is clean and smooth with no visible defects.
+</think>
+<location>[]</location>
+<type>good</type>
+<answer>no</answer>"""
+
+    print("\n=== Test Case 4: No tool calls (valid case) ===")
+    time_start = time.time()
+    score4 = compute_score("defect_detection", test_case_4, ground_truth_2, extra_info_2)
+    print(f"Score: {score4}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")

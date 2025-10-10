@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Mvtec-Visa     # 任务名称
 #SBATCH --partition=AIG_Models  # 分区名称
-#SBATCH --nodelist=tw036
+#SBATCH --nodelist=tw054
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
@@ -14,11 +14,65 @@
 # 设置容器名称
 CONTAINER_NAME="vllm-deep"
 
+# 监控间隔（秒）
+MONITOR_INTERVAL=300  # 5分钟 = 300秒
+
+# 存储监控进程的PID
+MONITOR_PID=""
+
+# Docker监控函数 - 每5分钟检查并停止其他docker容器
+monitor_docker_containers() {
+    echo "=========================================================="
+    echo "启动Docker容器监控服务"
+    echo "监控间隔: ${MONITOR_INTERVAL}秒 (5分钟)"
+    echo "当前容器: $CONTAINER_NAME"
+    echo "=========================================================="
+    
+    while true; do
+        # 获取所有正在运行的容器，排除当前容器
+        other_containers=$(docker ps --format "{{.Names}}" | grep -v "^${CONTAINER_NAME}$")
+        
+        if [ -n "$other_containers" ]; then
+            echo "=========================================================="
+            echo "[$(date)] 检测到其他正在运行的Docker容器："
+            echo "$other_containers"
+            echo "正在停止这些容器..."
+            
+            # 停止每个其他容器
+            echo "$other_containers" | while read -r container; do
+                if [ -n "$container" ]; then
+                    echo "  - 停止容器: $container"
+                    docker stop "$container" 2>&1
+                    if [ $? -eq 0 ]; then
+                        echo "    ✓ 容器 $container 已成功停止"
+                    else
+                        echo "    ✗ 停止容器 $container 时出现错误"
+                    fi
+                fi
+            done
+            echo "=========================================================="
+        else
+            echo "[$(date)] Docker容器监控检查: 没有检测到其他运行的容器 ✓"
+        fi
+        
+        # 等待指定的时间间隔
+        sleep $MONITOR_INTERVAL
+    done
+}
+
 # Cleanup function to stop and remove container
 cleanup() {
     echo "=========================================================="
     echo "执行清理操作..."
     echo "清理时间 (Cleanup Time): $(date)"
+    
+    # 停止监控进程
+    if [ -n "$MONITOR_PID" ] && kill -0 "$MONITOR_PID" 2>/dev/null; then
+        echo "正在停止Docker监控进程 (PID: $MONITOR_PID)..."
+        kill "$MONITOR_PID" 2>/dev/null
+        wait "$MONITOR_PID" 2>/dev/null
+        echo "Docker监控进程已停止。"
+    fi
     
     # Check if container is running and stop it
     if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
@@ -137,6 +191,14 @@ else
     docker restart "$CONTAINER_NAME"
 fi
 
+# 启动Docker容器监控进程（后台运行）
+echo "=========================================================="
+echo "启动后台监控进程..."
+monitor_docker_containers &
+MONITOR_PID=$!
+echo "监控进程已启动 (PID: $MONITOR_PID)"
+echo "=========================================================="
+
 echo "在容器 $CONTAINER_NAME 中执行训练脚本..."
 
 # 在指定的Docker容器中执行训练命令
@@ -162,6 +224,27 @@ if [ "$SCRIPT_SUCCESS" = true ]; then
 else
     echo "DeepEyes训练任务执行失败。"
 fi
+echo "=========================================================="
+
+# 等待6小时后再退出
+WAIT_HOURS=6
+WAIT_SECONDS=$((WAIT_HOURS * 3600))
+echo ""
+echo "=========================================================="
+echo "任务已完成，将在 ${WAIT_HOURS} 小时后退出"
+echo "等待开始时间: $(date)"
+echo "预计退出时间: $(date -d "+${WAIT_HOURS} hours" 2>/dev/null || date -v+${WAIT_HOURS}H 2>/dev/null || echo "N/A")"
+echo "在等待期间，Docker监控进程将继续运行..."
+echo "如需提前退出，可以手动取消任务 (scancel $SLURM_JOB_ID)"
+echo "=========================================================="
+
+# 等待指定时间
+sleep $WAIT_SECONDS
+
+echo ""
+echo "=========================================================="
+echo "等待时间已到，准备退出..."
+echo "实际退出时间: $(date)"
 echo "=========================================================="
 
 # Exit with the same code as the training script

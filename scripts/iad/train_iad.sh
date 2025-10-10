@@ -1,12 +1,12 @@
 #!/bin/bash
 
 set -x
-
-export LLM_AS_A_JUDGE_BASE="http://10.21.238.101:9091/v1"
+export VLLM_USE_V1=1
+export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-newversion"
+PROJECT_NAME="iad-tool"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints

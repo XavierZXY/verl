@@ -221,6 +221,18 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         metrics["tool_call_counts/max"] = tool_call_counts.max()
         metrics["tool_call_counts/mean"] = tool_call_counts.mean()
 
+    # Add detailed reward metrics if available
+    reward_components = ["format_reward", "acc_reward", "bbox_reward"]
+    for component in reward_components:
+        if component in batch.non_tensor_batch:
+            component_values = batch.non_tensor_batch[component]
+            # Filter non-aborted samples for more accurate statistics
+            non_aborted_values = component_values[non_aborted_mask.cpu().numpy()]
+            if len(non_aborted_values) > 0:
+                metrics[f"reward_components/{component}/mean"] = non_aborted_values.mean()
+                metrics[f"reward_components/{component}/max"] = non_aborted_values.max()
+                metrics[f"reward_components/{component}/min"] = non_aborted_values.min()
+
     return metrics
 
 
