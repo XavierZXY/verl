@@ -99,14 +99,20 @@ class VisualExecutionWorker:
 
 
 def init_visual_execution_pool(
-    num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode
+    num_workers: int,
+    enable_global_rate_limit=True,
+    rate_limit=10,
+    mode: PoolMode = PoolMode.ThreadMode,
 ):
     """Initialize visual execution pool."""
     if mode == PoolMode.ThreadMode:
         return (
             ray.remote(VisualExecutionWorker)
             .options(max_concurrency=num_workers)
-            .remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+            .remote(
+                enable_global_rate_limit=enable_global_rate_limit,
+                rate_limit=rate_limit,
+            )
         )
     else:
         raise NotImplementedError("Process mode is not implemented yet")
@@ -276,10 +282,17 @@ class ImageZoomInTool(BaseTool):
             new_bottom = new_top + target_height
 
             # Use floor and ceil for final integer coordinates.
-            current_bbox = [floor(new_left), floor(new_top), ceil(new_right), ceil(new_bottom)]
+            current_bbox = [
+                floor(new_left),
+                floor(new_top),
+                ceil(new_right),
+                ceil(new_bottom),
+            ]
 
         # 4. Final validation on the resulting bounding box (either original or resized).
-        final_left, final_top, final_right, final_bottom = current_bbox
+        # Ensure all coordinates are integers to avoid any floating point issues
+        final_left, final_top, final_right, final_bottom = [int(x) for x in current_bbox]
+        current_bbox = [final_left, final_top, final_right, final_bottom]
         if not self._validate_bbox(final_left, final_top, final_right, final_bottom):
             logger.warning(f"Final bbox is invalid after processing: {current_bbox}")
             return None
@@ -368,11 +381,21 @@ class ImageZoomInTool(BaseTool):
                 logger.warning(f"Tool execution failed: {error_msg}")
                 return ToolResponse(text=error_msg), -0.05, {"success": False}
 
-            cropped_image = image.crop(resized_bbox)
+            # Ensure the bbox is tuple of integers for PIL.Image.crop
+            cropped_image = image.crop(tuple(int(x) for x in resized_bbox))
+            logger.info(f"Original image size: {image.size}")
             logger.info(f"Cropped image size: {cropped_image.size}")
+            logger.info(f"Cropped image bbox: {resized_bbox}")
+            logger.info(
+                f"Size change ratio: {cropped_image.size[0] / image.size[0]:.2f}x{cropped_image.size[1] / image.size[1]:.2f}"
+            )
         except Exception as e:
             logger.error(f"Error processing image zoom-in: {e}")
-            return ToolResponse(text=f"Error processing image zoom-in: {e}"), -0.05, {"success": False}
+            return (
+                ToolResponse(text=f"Error processing image zoom-in: {e}"),
+                -0.05,
+                {"success": False},
+            )
 
         response_text = f"Zoomed in on the image to the region {bbox_2d}."
         if label:

@@ -26,6 +26,7 @@ from verl.utils.dataset.rl_dataset import RLHFDataset
 from verl.utils.model import compute_position_id_with_mask
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 openai_api_key = "EMPTY"
 openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
@@ -226,7 +227,9 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         # Strategy 2: If no <answer> tags, extract content after tool responses
         # Look for pattern: <tool_response>...</tool_response>assistant\n[actual_answer]
         tool_response_match = re.search(
-            r"</tool_response>\s*assistant\s*\n(.*?)$", predict_no_think, re.DOTALL | re.MULTILINE
+            r"</tool_response>\s*assistant\s*\n(.*?)$",
+            predict_no_think,
+            re.DOTALL | re.MULTILINE,
         )
         if tool_response_match:
             answer_text = tool_response_match.group(1).strip()
@@ -236,9 +239,17 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # Remove any remaining tool-related tags and extract meaningful content
                 remaining_content = predict_no_think
                 # Remove tool calls and responses
-                remaining_content = re.sub(r"<tool_call>.*?</tool_call>", "", remaining_content, flags=re.DOTALL)
                 remaining_content = re.sub(
-                    r"<tool_response>.*?</tool_response>", "", remaining_content, flags=re.DOTALL
+                    r"<tool_call>.*?</tool_call>",
+                    "",
+                    remaining_content,
+                    flags=re.DOTALL,
+                )
+                remaining_content = re.sub(
+                    r"<tool_response>.*?</tool_response>",
+                    "",
+                    remaining_content,
+                    flags=re.DOTALL,
                 )
                 # Remove user/assistant markers
                 remaining_content = re.sub(r"\b(user|assistant)\b", "", remaining_content)
@@ -399,7 +410,12 @@ The white van is visible in the lower section of the image, near the diagonal ro
     print(f"Ground truth: {problematic_ground_truth}")
 
     time_start = time.time()
-    score2 = compute_score("common_reasoning", problematic_solution, problematic_ground_truth, problematic_extra_info)
+    score2 = compute_score(
+        "common_reasoning",
+        problematic_solution,
+        problematic_ground_truth,
+        problematic_extra_info,
+    )
     print(f"Score: {score2}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
@@ -419,7 +435,10 @@ Zoomed in on the image to the region [226, 399, 265, 464] with label white van.
     print("\n=== Test Case 3: Well-formatted case ===")
     time_start = time.time()
     score3 = compute_score(
-        "common_reasoning", well_formatted_solution, problematic_ground_truth, problematic_extra_info
+        "common_reasoning",
+        well_formatted_solution,
+        problematic_ground_truth,
+        problematic_extra_info,
     )
     print(f"Score: {score3}")
     time_end = time.time()
