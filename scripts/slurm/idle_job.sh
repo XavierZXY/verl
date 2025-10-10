@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=machine_idle        # 任务名称
 #SBATCH --partition=AIG_Models         # 分区名称
-#SBATCH --nodelist=tw011               # 指定节点
+#SBATCH --nodelist=tw036               # 指定节点
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8                   # GPU数量
 #SBATCH --mem=400G                     # 内存需求
 #SBATCH --exclusive                    # 独占节点
-#SBATCH --time=24:00:00                # 任务超时时间，设置为24小时
+#SBATCH --time=8:00:00                # 任务超时时间，设置为24小时
 #SBATCH --output=log/idle_%j.out       # 输出日志文件
 #SBATCH --error=log/idle_%j.err        # 错误日志文件
 
@@ -123,8 +123,6 @@ if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
             --security-opt seccomp=unconfined \
             --group-add video \
             -w /home/takisobe@amd.com/zxy \
-            -p 9093:9093 \
-            -p 9094:9094 \
             -t rocm/vllm:rocm6.4.1_vllm_0.10.0_20250812
         
         if [ $? -eq 0 ]; then

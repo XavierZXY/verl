@@ -38,8 +38,15 @@ from sglang.srt.managers.io_struct import (
 from verl.single_controller.ray import RayClassWithInitArgs
 from verl.utils.config import omega_conf_to_dataclass
 from verl.workers.config import HFModelConfig, RolloutConfig
-from verl.workers.rollout.replica import RolloutMode, RolloutReplica, TokenOutput
-from verl.workers.rollout.sglang_rollout.sglang_rollout import ServerAdapter, _set_envs_and_config
+from verl.workers.rollout.replica import (
+    RolloutMode,
+    RolloutReplica,
+    TokenOutput,
+)
+from verl.workers.rollout.sglang_rollout.sglang_rollout import (
+    ServerAdapter,
+    _set_envs_and_config,
+)
 from verl.workers.rollout.utils import get_free_port, run_unvicorn
 
 logger = logging.getLogger(__file__)
@@ -128,7 +135,7 @@ class SGLangHttpServer:
             "mem_fraction_static": self.config.gpu_memory_utilization,
             "disable_cuda_graph": self.config.enforce_eager,
             "enable_memory_saver": False,
-            "base_gpu_id": 0,
+            "base_gpu_id": self.replica_rank,
             "gpu_id_step": 1,
             "tp_size": self.config.tensor_model_parallel_size,
             "node_rank": self.node_rank,
@@ -193,7 +200,10 @@ class SGLangHttpServer:
     ) -> TokenOutput:
         """Generate sequence with token-in-token-out."""
         # TODO(@wuxibin): switch to `/generate` http endpoint once multi-modal support ready.
-        max_new_tokens = min(self.config.response_length, self.config.max_model_len - len(prompt_ids) - 1)
+        max_new_tokens = min(
+            self.config.response_length,
+            self.config.max_model_len - len(prompt_ids) - 1,
+        )
         sampling_params["max_new_tokens"] = max_new_tokens
         return_logprob = sampling_params.pop("logprobs", False)
 
@@ -208,7 +218,8 @@ class SGLangHttpServer:
         if return_logprob:
             output_token_logprobs = output["meta_info"]["output_token_logprobs"]
             log_probs, token_ids = zip(
-                *[(log_prob, token_ids) for log_prob, token_ids, _ in output_token_logprobs], strict=True
+                *[(log_prob, token_ids) for log_prob, token_ids, _ in output_token_logprobs],
+                strict=True,
             )
         else:
             token_ids = output["output_ids"]
@@ -240,7 +251,10 @@ class SGLangReplica(RolloutReplica):
         worker_infos = await asyncio.gather(
             *[
                 worker.__ray_call__.remote(
-                    lambda self: (ray.get_runtime_context().get_node_id(), os.environ["CUDA_VISIBLE_DEVICES"])
+                    lambda self: (
+                        ray.get_runtime_context().get_node_id(),
+                        os.environ["CUDA_VISIBLE_DEVICES"],
+                    )
                 )
                 for worker in self.workers
             ]
