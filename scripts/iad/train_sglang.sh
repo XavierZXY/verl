@@ -1,11 +1,13 @@
 #!/bin/bash
 
 set -x
-
+export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export LLM_AS_A_JUDGE_BASE="http://10.21.238.101:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
+export VERL_LOGGING_LEVEL=INFO
+
 PROJECT_NAME="iad-newversion"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
@@ -20,7 +22,7 @@ DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_10.parquet
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_8.parquet
 # DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test_enhanced.parquet
 # DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test_enhanced.parquet
-REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
+REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=10
@@ -32,10 +34,10 @@ LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
-N_ROLLOUT=8
+N_ROLLOUT=1
 GRAD_CLIP=1
 # EXPERIMENT_NAME="Mvtex-bbox-reward-visa-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="sglang-test-v4-7B"
+EXPERIMENT_NAME="sglang-test-v4"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
