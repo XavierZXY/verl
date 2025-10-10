@@ -126,3 +126,9 @@ logs
 log
 outputs
 .history
+
+# wandb key
+wandb_key
+swanlab_key
+# data toml config
+data.toml

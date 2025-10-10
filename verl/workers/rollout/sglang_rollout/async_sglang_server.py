@@ -38,8 +38,15 @@ from verl.single_controller.ray import RayClassWithInitArgs
 from verl.utils.config import omega_conf_to_dataclass
 from verl.workers.config import HFModelConfig, RewardModelConfig, RolloutConfig
 from verl.workers.rollout.replica import RolloutMode, RolloutReplica, TokenOutput
-from verl.workers.rollout.sglang_rollout.sglang_rollout import ServerAdapter, _set_envs_and_config
-from verl.workers.rollout.utils import get_free_port, is_valid_ipv6_address, run_unvicorn
+from verl.workers.rollout.sglang_rollout.sglang_rollout import (
+    ServerAdapter,
+    _set_envs_and_config,
+)
+from verl.workers.rollout.utils import (
+    get_free_port,
+    is_valid_ipv6_address,
+    run_unvicorn,
+)
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
@@ -134,7 +141,7 @@ class SGLangHttpServer:
             "dtype": self.config.dtype,
             "mem_fraction_static": self.config.gpu_memory_utilization,
             "disable_cuda_graph": self.config.enforce_eager,
-            "enable_memory_saver": True,
+            "enable_memory_saver": False,
             "base_gpu_id": 0,
             "gpu_id_step": 1,
             "tp_size": self.config.tensor_model_parallel_size,
@@ -147,8 +154,8 @@ class SGLangHttpServer:
             "trust_remote_code": self.model_config.trust_remote_code,
             "max_running_requests": self.config.get("max_num_seqs", None),
             "log_level": "error",
-            "mm_attention_backend": "fa3",
-            "attention_backend": attention_backend if attention_backend is not None else "fa3",
+            "mm_attention_backend": "triton_attn",
+            "attention_backend": attention_backend if attention_backend is not None else "aiter",
             "skip_tokenizer_init": self.config.skip_tokenizer_init,
         }
 
@@ -221,7 +228,8 @@ class SGLangHttpServer:
         if return_logprob:
             output_token_logprobs = output["meta_info"]["output_token_logprobs"]
             log_probs, token_ids = zip(
-                *[(log_prob, token_ids) for log_prob, token_ids, _ in output_token_logprobs], strict=True
+                *[(log_prob, token_ids) for log_prob, token_ids, _ in output_token_logprobs],
+                strict=True,
             )
         else:
             token_ids = output["output_ids"]
@@ -253,7 +261,10 @@ class SGLangReplica(RolloutReplica):
         worker_infos = await asyncio.gather(
             *[
                 worker.__ray_call__.remote(
-                    lambda self: (ray.get_runtime_context().get_node_id(), os.environ["CUDA_VISIBLE_DEVICES"])
+                    lambda self: (
+                        ray.get_runtime_context().get_node_id(),
+                        os.environ["CUDA_VISIBLE_DEVICES"],
+                    )
                 )
                 for worker in self.workers
             ]
