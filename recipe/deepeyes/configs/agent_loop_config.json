@@ -1,0 +1,6 @@
+[
+    {
+        "_target_": "recipe.deepeyes.deepeyes_react_agent_loop.DeepEyesReactAgentLoop",
+        "name": "deepeyes_agent"
+    }
+]

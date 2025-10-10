@@ -100,6 +100,9 @@ class vLLMRollout(BaseRollout):
         model_config: HFModelConfig,
         device_mesh: DeviceMesh,
     ):
+        # Disable NCCL cumem allocator to avoid compatibility issues with ROCm and other platforms
+        # This prevents "cumem allocator is not available" errors on AMD ROCm
+        os.environ["NCCL_CUMEM_ENABLE"] = "0"
         super().__init__(config, model_config, device_mesh)
 
         if config.layered_summon:
@@ -417,6 +420,11 @@ class vLLMRollout(BaseRollout):
         if not self.config.free_cache_engine:
             return
 
+        # Skip sleep/wake_up on AMD ROCm as cumem allocator is not available
+        if torch.version.hip is not None:
+            logger.warning("Skipping wake_up on AMD ROCm platform (cumem allocator not available)")
+            return
+
         if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
             self.inference_engine.wake_up(tags=tags)
         else:
@@ -427,6 +435,11 @@ class vLLMRollout(BaseRollout):
         self.inference_engine.reset_prefix_cache()
 
         if not self.config.free_cache_engine:
+            return
+
+        # Skip sleep/wake_up on AMD ROCm as cumem allocator is not available
+        if torch.version.hip is not None:
+            logger.warning("Skipping sleep on AMD ROCm platform (cumem allocator not available)")
             return
 
         self.inference_engine.sleep(level=self.sleep_level)
@@ -482,6 +495,9 @@ class vLLMAsyncRollout(BaseRollout):
         model_config: HFModelConfig,
         device_mesh: DeviceMesh,
     ):
+        # Disable NCCL cumem allocator to avoid compatibility issues with ROCm and other platforms
+        # This prevents "cumem allocator is not available" errors on AMD ROCm
+        os.environ["NCCL_CUMEM_ENABLE"] = "0"
         super().__init__(config, model_config, device_mesh)
         self.tokenizer = model_config.tokenizer
         self.inference_engine: WorkerWrapperBase = None
@@ -558,7 +574,16 @@ class vLLMAsyncRollout(BaseRollout):
 
     def _load_model(self, *args, **kwargs):
         self.inference_engine.load_model(*args, **kwargs)
-        _monkey_patch_compute_logits(self.inference_engine.worker.model_runner.model, len(self.tokenizer))
+        try:
+            # Try vLLM v1 structure
+            if hasattr(self.inference_engine, 'worker') and self.inference_engine.worker is not None:
+                model = self.inference_engine.worker.model_runner.model
+                _monkey_patch_compute_logits(model, len(self.tokenizer))
+                logger.info(f"Applied _monkey_patch_compute_logits with vocab_size={len(self.tokenizer)}")
+            else:
+                logger.warning("Could not find worker.model_runner.model to apply monkey patch")
+        except Exception as e:
+            logger.error(f"Failed to apply _monkey_patch_compute_logits: {e}", exc_info=True)
 
     async def _execute_method(self, method: str | bytes, *args, **kwargs):
         if method == "init_worker":
@@ -577,11 +602,19 @@ class vLLMAsyncRollout(BaseRollout):
             tags: weights or kv_cache.
         """
         if self.config.free_cache_engine:
+            # Skip sleep/wake_up on AMD ROCm as cumem allocator is not available
+            if torch.version.hip is not None:
+                logger.warning("Skipping wake_up on AMD ROCm platform (cumem allocator not available)")
+                return
             self.inference_engine.wake_up(tags=tags)
 
     async def release(self):
         """Release weights and kv cache in GPU memory."""
         if self.config.free_cache_engine:
+            # Skip sleep/wake_up on AMD ROCm as cumem allocator is not available
+            if torch.version.hip is not None:
+                logger.warning("Skipping sleep on AMD ROCm platform (cumem allocator not available)")
+                return
             self.inference_engine.sleep(level=self.sleep_level)
 
     async def update_weights(self, weights: Generator[tuple[str, torch.Tensor], None, None], **kwargs):

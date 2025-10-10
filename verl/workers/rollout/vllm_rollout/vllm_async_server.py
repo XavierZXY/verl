@@ -136,6 +136,9 @@ class vLLMHttpServer:
             nnodes (int): number of nodes.
         """
         super().__init__()
+        # Disable NCCL cumem allocator to avoid compatibility issues with ROCm and other platforms
+        # This prevents "cumem allocator is not available" errors on AMD ROCm
+        os.environ["NCCL_CUMEM_ENABLE"] = "0"
 
         self.config: RolloutConfig | RewardModelConfig = omega_conf_to_dataclass(config)
         self.model_config: HFModelConfig = omega_conf_to_dataclass(model_config, dataclass_type=HFModelConfig)
@@ -302,6 +305,16 @@ class vLLMHttpServer:
 
         # Don't keep the dummy data in memory
         await engine_client.reset_mm_cache()
+
+        # Check for potential weight sync issue in hybrid mode
+        if self.rollout_mode == RolloutMode.HYBRID and self.config.load_format == "dummy":
+            logger.warning(
+                "Using load_format='dummy' in HYBRID mode with async rollout. "
+                "Ensure weights are properly synchronized from FSDP to vLLM via wake_up() calls. "
+                "If you see gibberish output, the weights may not be syncing correctly. "
+                "Set actor_rollout_ref.rollout.free_cache_engine=True to enable weight synchronization, "
+                "or use load_format='auto' to load actual weights at startup."
+            )
 
         app = build_app(args)
         await init_app_state(engine_client, vllm_config, app.state, args)
