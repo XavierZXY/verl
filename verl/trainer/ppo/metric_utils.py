@@ -222,7 +222,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         metrics["tool_call_counts/mean"] = tool_call_counts.mean()
 
     # Add detailed reward metrics if available
-    reward_components = ["format_reward", "acc_reward", "bbox_reward"]
+    reward_components = ["format_reward", "acc_reward", "bbox_reward", "tool_reward"]
     for component in reward_components:
         if component in batch.non_tensor_batch:
             component_values = batch.non_tensor_batch[component]

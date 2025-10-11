@@ -74,6 +74,9 @@ class AgentData:
 
         # Temporary state for tool calls
         self.tool_calls: list[FunctionCall] = []
+        
+        # Multi-turn conversation tracking for logging
+        self.conversation_history: list[dict[str, Any]] = []
 
 
 @register("tool_agent")
@@ -176,7 +179,11 @@ class ToolAgentLoop(AgentLoopBase):
             metrics=agent_data.metrics,
             extra_fields={},
         )
-        output.extra_fields.update({"turn_scores": agent_data.turn_scores, "tool_rewards": agent_data.tool_rewards})
+        output.extra_fields.update({
+            "turn_scores": agent_data.turn_scores,
+            "tool_rewards": agent_data.tool_rewards,
+            "conversation_history": agent_data.conversation_history,
+        })
         return output
 
     async def _handle_pending_state(self, agent_data: AgentData, sampling_params: dict[str, Any]) -> AgentState:
@@ -228,6 +235,18 @@ class ToolAgentLoop(AgentLoopBase):
         if output.log_probs:
             agent_data.response_logprobs += output.log_probs
 
+        # Decode assistant response for logging
+        assistant_message_text = await self.loop.run_in_executor(
+            None, lambda: self.tokenizer.decode(agent_data.response_ids, skip_special_tokens=True)
+        )
+        
+        # Record to conversation history for logging
+        agent_data.conversation_history.append({
+            "role": "assistant",
+            "content": assistant_message_text,
+            "turn": agent_data.assistant_turns,
+        })
+
         # Check termination conditions
         if not ignore_termination and len(agent_data.response_mask) >= self.response_length:
             return AgentState.TERMINATED
@@ -241,10 +260,7 @@ class ToolAgentLoop(AgentLoopBase):
 
         # Handle interaction if needed
         if self.interaction_config_file:
-            assistant_message = await self.loop.run_in_executor(
-                None, lambda: self.tokenizer.decode(agent_data.response_ids, skip_special_tokens=True)
-            )
-            add_messages.append({"role": "assistant", "content": assistant_message})
+            add_messages.append({"role": "assistant", "content": assistant_message_text})
             agent_data.messages.extend(add_messages)
 
         # Determine next state
@@ -269,7 +285,7 @@ class ToolAgentLoop(AgentLoopBase):
 
         # Process tool responses and update multi_modal_data
         # Removed: agent_data.new_images_this_turn = []
-        for tool_response, tool_reward, _ in responses:
+        for idx, (tool_response, tool_reward, tool_metadata) in enumerate(responses):
             # Create message from tool response
             if tool_response.image or tool_response.video:
                 # Multi-modal content with structured format
@@ -293,7 +309,16 @@ class ToolAgentLoop(AgentLoopBase):
 
             add_messages.append(message)
             agent_data.messages.extend(add_messages)
-
+            
+            # Record tool response to conversation history for logging
+            tool_history_entry = {
+                "role": "tool",
+                "content": tool_response.text or "",
+                "turn": agent_data.user_turns + 1,  # Will be incremented later
+                "tool_name": agent_data.tool_calls[idx].name if idx < len(agent_data.tool_calls) else "unknown",
+                "tool_success": tool_metadata.get("success", True),
+            }
+            
             # Handle image data
             if tool_response.image:
                 if agent_data.image_data is None:
@@ -302,17 +327,23 @@ class ToolAgentLoop(AgentLoopBase):
                     agent_data.image_data = [agent_data.image_data]
 
                 # Add new image data
+                cropped_images_for_logging = []
                 if isinstance(tool_response.image, list):
                     # Ensure all elements in the list are valid image objects
                     for img in tool_response.image:
                         if img is not None:  # Add a check to ensure the image is not None
                             agent_data.image_data.append(img)
                             new_images_this_turn.append(img)  # Using local variable
+                            cropped_images_for_logging.append(img)
                 else:
                     # Ensure the image is not None
                     if tool_response.image is not None:
                         agent_data.image_data.append(tool_response.image)
                         new_images_this_turn.append(tool_response.image)  # Using local variable
+                        cropped_images_for_logging.append(tool_response.image)
+                
+                # Add cropped images to history entry
+                tool_history_entry["cropped_images"] = cropped_images_for_logging
 
             # Handle video data
             if tool_response.video:
@@ -324,6 +355,10 @@ class ToolAgentLoop(AgentLoopBase):
 
             if tool_reward is not None:
                 agent_data.tool_rewards.append(tool_reward)
+                tool_history_entry["tool_reward"] = tool_reward
+            
+            # Add to conversation history
+            agent_data.conversation_history.append(tool_history_entry)
 
         # Update prompt with tool responses
         if self.processor is not None:

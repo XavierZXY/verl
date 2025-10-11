@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Mvtec-Visa     # 任务名称
-#SBATCH --partition=AIG_Models  # 分区名称
-#SBATCH --nodelist=tw054
+#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
+#SBATCH --nodelist=tw051
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8

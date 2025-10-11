@@ -29,27 +29,54 @@ from verl.utils.model import compute_position_id_with_mask
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT: str = (
-    "You are a highly precise and meticulous quality control inspector. Your primary mission is to "
-    "analyze images and determine if any defects are present. Your decision must be grounded in visual evidence."
-    "Carefully follow these instructions for your response format:"
-    "**If you detect one or more defects:**"
-    "Your response MUST be structured with the following four tags in this exact order:"
-    "1.  `<think></think>`: Provide a step-by-step reasoning process. Describe the visual "
-    'characteristics of the anomaly (e.g., "I observe a dark, irregular crack on the upper left surface..."). '
-    "You may use tools to zoom in on specific regions if needed. "
-    "Tool calls should be placed within <tool_call></tool_call> tags, and tool responses will be in <tool_response></tool_response> tags."
-    "2.  `<location></location>`: Provide a JSON list of all detected defect locations.Notice! You should give the location of the only defects not the full object."
-    ' Each item in the list must be a JSON object with a "bbox2d" key and coordinates in `[x_min, y_min, x_max, y_max]` format. '
-    'For example: `[{"bbox2d": [100, 150, 200, 250]}, {"bbox2d": [300, 350, 400, 450]}]`.Do not give more than 3 bounding boxes. If you are uncertain about the exact location, '
-    "provide an approximate bounding box that best encompasses the defect area."
-    '3.  `<type></type>`: Specify the type of defect found (e.g., "crack", "discoloration", "scratch", "hole", "surface" and "other"). If the type is uncertain, use "unspecified".'
-    '4.  `<answer></answer>`: Conclude with "yes".'
-    "**If you detect NO defects:**"
-    "Your response MUST be structured with the following two tags:"
-    "1.  `<think></think>`: Explain why you believe the object is defect-free. Describe the normal and healthy features you observed."
-    "2.  `<location></location>`: Provide an empty JSON list."
-    '3.  `<type></type>`: "good".'
-    '4.  `<answer></answer>`: Conclude with "no".'
+    "You are a highly precise and meticulous quality control inspector. Your mission is to analyze images for defects based on visual evidence.\n"
+    "Your response must follow one of the three formats below, depending on your assessment.\n"
+    "---\n"
+    "### Format 1: Use When You Need to Use a Tool\n"
+    "If you cannot confidently identify or locate a defect and require a closer view or you don't find the defect, you can try to use the tool to get more information,"
+    " your response **MUST ONLY** contain these two tags:\n"
+    "1.  **`<think></think>`**: Explain why you need to use a tool. For example, describe what you see and why it's ambiguous "
+    '(e.g., "I see a potential anomaly in the lower-right corner, but the resolution is too low to confirm if it\'s a crack or a shadow. '
+    'I will use the zoom tool to inspect it.").\n'
+    "2.  **`<tool_call></tool_call>`**: Provide the tool call needed to get more information.\n"
+    "** Example of a Tool Request Turn:**\n"
+    "<think>I observe a faint, dark spot on the main body of the component. It is unclear if this is a surface hole or a smudge. "
+    "I need to zoom in to determine its nature and precise boundaries.</think>\n"
+    "<tool_call>\n"
+    '[{"tool_name": "zoom_in", "parameters": {"bbox": [250, 300, 300, 350]}}]\n'
+    "</tool_call>\n"
+    "---\n"
+    "### Format 2: Use When You Have Found a Defect\n"
+    "Use this format to provide your final conclusion when you have confidently identified one or more defects "
+    "(either initially or after using a tool). Your response MUST NOT contain `<tool_call>`.\n"
+    "1.  **`<think></think>`**: Provide your final step-by-step reasoning. If you previously used a tool, explain how the tool's output "
+    'helped you make the final decision (e.g., "After zooming in, the spot is clearly a small, pitted hole in the surface.").\n'
+    "2.  **`<location></location>`**: Provide a JSON list of all detected defect locations (defect only, not the whole object).\n"
+    '    - Must use "bbox2d" key with [x_min, y_min, x_max, y_max] coordinates.\n'
+    "    - Maximum of 3 bounding boxes.\n"
+    '    - Example: [{"bbox2d": [100, 150, 200, 250]}]\n'
+    "3.  **`<type></type>`**: Specify the defect type from the list: \"crack\", \"discoloration\", \"scratch\", \"hole\", \"surface\", \"other\". "
+    'Use "unspecified" if uncertain.\n'
+    '4.  **`<answer></answer>`**: Conclude with "yes".\n'
+    "** Example of a Final \"Defect Found\" Turn (after a tool was used):**\n"
+    "<think>The zoomed-in view from the tool confirms that the dark spot is a well-defined circular hole, not a smudge. "
+    "I can now confidently mark its location and type.</think>\n"
+    '[{"bbox2d": [265, 310, 280, 325]}]\n'
+    "<type>hole</type>\n"
+    "<answer>yes</answer>\n"
+    "---\n"
+    "### Format 3: Use When You Have Found NO Defects\n"
+    "Use this format when you are confident the item is free of defects.\n"
+    "1.  **`<think></think>`**: Explain why you believe the object is defect-free. Describe the normal and healthy features you observed.\n"
+    "2.  **`<location></location>`**: Provide an empty JSON list: [].\n"
+    '3.  **`<type></type>`**: Use the value "good".\n'
+    '4.  **`<answer></answer>`**: Conclude with "no".\n'
+    "** Example of a \"No Defect\" Turn:**\n"
+    "<think>I have thoroughly scanned the entire surface. The finish is uniform, and there are no signs of cracks, scratches, "
+    "or any other anomalies. The object meets quality standards.</think>\n"
+    "<location>[]</location>\n"
+    "<type>good</type>\n"
+    "<answer>no</answer>\n"
 )
 openai_api_key = "EMPTY"
 openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
@@ -532,10 +559,11 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     """
     Compute reward score for defect detection task.
 
-    The score consists of three components:
+    The score consists of four components:
     1. Format reward: Checks if output follows expected format with proper tags
     2. Answer correctness reward: Uses LLM judge to evaluate answer accuracy
     3. Bbox correctness reward: Only computed when answer is correct, evaluates bbox IoU
+    4. Tool reward: Rewards appropriate tool usage that leads to good results
 
     Args:
         data_source: Source of the data (not used currently)
@@ -544,59 +572,101 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         extra_info: Additional information including question, bboxes, etc.
 
     Returns:
-        float: Final reward score
+        dict: Dictionary containing score and reward components
     """
     import json
 
     format_errors_count = 0
 
-    # 1. Format checking - check all required tags and count errors
-    count_think_1 = solution_str.count("<think>")
-    count_think_2 = solution_str.count("</think>")
-    if count_think_1 != count_think_2:
-        format_errors_count += 1
-
-    predict_no_think = solution_str.split("</think>")[-1].strip() if "</think>" in solution_str else solution_str
-
-    count_answer_1 = predict_no_think.count("<answer>")
-    count_answer_2 = predict_no_think.count("</answer>")
-    if count_answer_1 != count_answer_2:
-        format_errors_count += 1
-
-    count_location_1 = predict_no_think.count("<location>")
-    count_location_2 = predict_no_think.count("</location>")
-    if count_location_1 != count_location_2:
-        format_errors_count += 1
-
-    count_type_1 = predict_no_think.count("<type>")
-    count_type_2 = predict_no_think.count("</type>")
-    if count_type_1 != count_type_2:
-        format_errors_count += 1
-
-    # Check tool call format tags (if present)
+    # Detect if this is a tool request turn (Format 1) or final answer turn (Format 2/3)
+    has_answer_tag = "<answer>" in solution_str
+    has_tool_call = "<tool_call>" in solution_str
+    
+    # Count tool calls and responses in entire solution
     count_tool_call_1 = solution_str.count("<tool_call>")
     count_tool_call_2 = solution_str.count("</tool_call>")
-    if count_tool_call_1 != count_tool_call_2:
-        format_errors_count += 1
-
     count_tool_response_1 = solution_str.count("<tool_response>")
     count_tool_response_2 = solution_str.count("</tool_response>")
-    if count_tool_response_1 != count_tool_response_2:
+    
+    # Check if model used tools (has tool_response, indicating tool was executed)
+    used_tools = count_tool_response_1 > 0
+
+    # 1. Format checking based on which format should be used
+    count_think_1 = solution_str.count("<think>")
+    count_think_2 = solution_str.count("</think>")
+    if count_think_1 != count_think_2 or count_think_1 == 0:
         format_errors_count += 1
 
-    # Validate tool call JSON format (if tool calls are present)
-    if count_tool_call_1 > 0 and not _validate_tool_call_json(solution_str):
-        format_errors_count += 1
+    # If this is a tool request turn (Format 1)
+    if has_tool_call and not has_answer_tag:
+        # Format 1: Should ONLY have <think> and <tool_call>
+        # Check tool_call tags
+        if count_tool_call_1 != count_tool_call_2 or count_tool_call_1 == 0:
+            format_errors_count += 1
+        
+        # Validate tool call JSON format
+        if not _validate_tool_call_json(solution_str):
+            format_errors_count += 1
+        
+        # Should NOT have answer, location, type tags in Format 1
+        if "<answer>" in solution_str or "<location>" in solution_str or "<type>" in solution_str:
+            format_errors_count += 1
+        
+        # For Format 1, we don't compute answer/bbox rewards, only format
+        format_reward = _smooth_format_reward(format_errors_count, total_checks=4)
+        return {
+            "score": format_reward,
+            "format_reward": format_reward,
+            "acc_reward": 0.0,
+            "bbox_reward": 0.0,
+            "tool_reward": 0.0,
+        }
+    
+    # If this is a final answer turn (Format 2 or 3)
+    if has_answer_tag:
+        # Extract the final answer section (after last </think>)
+        predict_no_think = solution_str.split("</think>")[-1].strip() if "</think>" in solution_str else solution_str
+        
+        # Check that final answer section does NOT contain <tool_call>
+        if "<tool_call>" in predict_no_think:
+            format_errors_count += 1
+        
+        # Check required tags in final answer section
+        count_answer_1 = predict_no_think.count("<answer>")
+        count_answer_2 = predict_no_think.count("</answer>")
+        if count_answer_1 != count_answer_2 or count_answer_1 == 0:
+            format_errors_count += 1
 
-    # Extract components
-    answer_text = extract_answer(predict_no_think)
-    location_text = extract_location(predict_no_think)
-    type_text = extract_type(predict_no_think)  # noqa: F841 - extracted for format checking, not used in reward
+        count_location_1 = predict_no_think.count("<location>")
+        count_location_2 = predict_no_think.count("</location>")
+        if count_location_1 != count_location_2 or count_location_1 == 0:
+            format_errors_count += 1
 
-    # Check if answer exists
-    if not answer_text:
-        format_errors_count += 1
+        count_type_1 = predict_no_think.count("<type>")
+        count_type_2 = predict_no_think.count("</type>")
+        if count_type_1 != count_type_2 or count_type_1 == 0:
+            format_errors_count += 1
+        
+        # Validate tool call JSON format in earlier turns (if present)
+        if count_tool_call_1 > 0 and not _validate_tool_call_json(solution_str):
+            format_errors_count += 1
+
+        # Extract components from final answer section
+        answer_text = extract_answer(predict_no_think)
+        location_text = extract_location(predict_no_think)
+        type_text = extract_type(predict_no_think)  # noqa: F841
+        
+        # Check if answer exists
+        if not answer_text:
+            format_errors_count += 1
+            answer_text = ""
+    else:
+        # No answer tag and no tool call - invalid format
+        format_errors_count += 3
         answer_text = ""
+        location_text = None
+        type_text = None
+        predict_no_think = solution_str
 
     # Check bbox format (3-box limit)
     bbox_format_ok = False
@@ -615,13 +685,19 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             pass
 
     # Smooth format reward based on error count
-    # Total checks: think, answer, location, type, tool_call, tool_response tags + answer existence + tool_call JSON validation
-    format_reward = _smooth_format_reward(format_errors_count, total_checks=8)
+    # Total checks: think, answer, location, type tags + tool_call validation + no tool_call in final answer
+    format_reward = _smooth_format_reward(format_errors_count, total_checks=6)
 
     # 2. Answer correctness using LLM judge
     if not client or not model_name:
         logger.warning("Reward function client not initialized or model name not found.")
-        return format_reward
+        return {
+            "score": format_reward,
+            "format_reward": format_reward,
+            "acc_reward": 0.0,
+            "bbox_reward": 0.0,
+            "tool_reward": 0.0,
+        }
 
     # Extract ground truth answer
     ground_truth_answer = _extract_ground_truth_answer(ground_truth, extra_info)
@@ -631,7 +707,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     if len(answer_text) >= 1000:
         acc_reward = 0.0
         format_errors_count += 1
-        format_reward = _smooth_format_reward(format_errors_count, total_checks=8)
+        format_reward = _smooth_format_reward(format_errors_count, total_checks=6)
     elif not answer_text:
         acc_reward = 0.0
     else:
@@ -686,16 +762,38 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         # Combine format and IoU rewards for bbox
         bbox_reward = 0.2 * (1.0 if bbox_format_ok else 0.0) + 0.8 * bbox_iou_reward
 
-    # Final score calculation with smooth combination
-    # Apply clipping and normalization to individual rewards
-    # format_reward_clipped = _clip_and_normalize_reward(format_reward, min_val=-0.5, max_val=1.0)
-    # acc_reward_clipped = _clip_and_normalize_reward(acc_reward, min_val=0.0, max_val=1.0)
+    # 4. Tool reward - reward appropriate tool usage that leads to good results
+    tool_reward = 0.0
+    if used_tools:
+        # If model used tools and achieved good results, give high tool reward
+        # Tool usage is beneficial if both acc and bbox rewards are good
+        combined_result_quality = (acc_reward + bbox_reward) / 2.0
+        
+        # Progressive tool reward based on result quality
+        if combined_result_quality >= 0.8:
+            # Excellent results after using tools
+            tool_reward = 1.0
+        elif combined_result_quality >= 0.6:
+            # Good results after using tools
+            tool_reward = 0.7 + 0.3 * (combined_result_quality - 0.6) / 0.2
+        elif combined_result_quality >= 0.4:
+            # Moderate results after using tools
+            tool_reward = 0.4 + 0.3 * (combined_result_quality - 0.4) / 0.2
+        else:
+            # Poor results even after using tools
+            tool_reward = combined_result_quality
+        
+        # Additional bonus if tool call format is correct
+        if _validate_tool_call_json(solution_str) and count_tool_call_1 == count_tool_call_2:
+            tool_reward = min(1.0, tool_reward + 0.1)
+    else:
+        # No tools used - neutral reward
+        # We don't penalize not using tools, as sometimes they may not be needed
+        tool_reward = 0.0
 
-    # Weighted combination with smooth blending
-    raw_score = 0.5 * format_reward + 0.5 * acc_reward + 0.5 * bbox_reward
-    # raw_score = 0.5 * format_reward + 0.5 * acc_reward
-    
-    
+    # Final score calculation with smooth combination
+    # Weighted combination: format (30%), acc (30%), bbox (30%), tool (10%)
+    raw_score = 0.5 * format_reward + 0.5 * acc_reward + 0.5 * bbox_reward + 0.3 * tool_reward
 
     # Apply final smoothing to prevent extreme gradients
     final_score = _clip_and_normalize_reward(raw_score, min_val=-0.5, max_val=1.0)
@@ -706,13 +804,13 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         tool_call_valid = _validate_tool_call_json(solution_str) if has_tool_calls else True
         logger.debug(
             f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-            f"bbox={bbox_reward:.2f}, final={final_score:.2f}, "
-            f"format_errors={format_errors_count}, has_tools={has_tool_calls}, tool_json_valid={tool_call_valid}"
+            f"bbox={bbox_reward:.2f}, tool={tool_reward:.2f}, final={final_score:.2f}, "
+            f"format_errors={format_errors_count}, used_tools={used_tools}, tool_json_valid={tool_call_valid}"
         )
         print(
             f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-            f"bbox={bbox_reward:.2f}, final={final_score:.2f}, "
-            f"format_errors={format_errors_count}, has_tools={has_tool_calls}, tool_json_valid={tool_call_valid}"
+            f"bbox={bbox_reward:.2f}, tool={tool_reward:.2f}, final={final_score:.2f}, "
+            f"format_errors={format_errors_count}, used_tools={used_tools}, tool_json_valid={tool_call_valid}"
         )
 
     return {
@@ -720,6 +818,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         "format_reward": format_reward,
         "acc_reward": acc_reward,
         "bbox_reward": bbox_reward,
+        "tool_reward": tool_reward,
     }
 
 

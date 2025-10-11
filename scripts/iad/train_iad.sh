@@ -2,6 +2,7 @@
 
 set -x
 export VLLM_USE_V1=1
+# export VERL_LOGGING_LEVEL=INFO
 export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
@@ -34,7 +35,8 @@ ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
-EXPERIMENT_NAME="Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
+# EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
+EXPERIMENT_NAME="TW-003-Tool-logtest"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

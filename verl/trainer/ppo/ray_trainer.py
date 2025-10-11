@@ -473,6 +473,58 @@ class RayPPOTrainer:
                 reward_extra_infos_dict=reward_extra_infos_to_dump,
                 dump_path=rollout_data_dir,
             )
+    
+    def _log_multiturn_rollout(self, batch: DataProto, max_samples: int = 10):
+        """Log multi-turn rollout conversations with tool images to wandb/swanlab.
+        
+        Only logs the first rollout of each unique sample (when rollout.n > 1).
+        
+        Args:
+            batch (DataProto): The batch containing rollout data with conversation_history
+            max_samples (int): Maximum number of unique samples to log (default: 10)
+        """
+        # Check if conversation_history is available in non_tensor_batch
+        if "conversation_history" not in batch.non_tensor_batch:
+            return
+        
+        conversation_histories = batch.non_tensor_batch.get("conversation_history", [])
+        uids = batch.non_tensor_batch.get("uid", [])
+        scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
+        
+        # Get rollout.n (number of rollouts per sample)
+        n_rollouts = self.config.actor_rollout_ref.rollout.n
+        
+        # Prepare data for logging (only first rollout of each unique sample)
+        multiturn_samples = []
+        for i in range(max_samples):
+            # Calculate index: 0, n, 2*n, 3*n, ... to get first rollout of each sample
+            idx = i * n_rollouts
+            
+            if idx >= len(batch):
+                break
+            
+            conversation_history = conversation_histories[idx] if idx < len(conversation_histories) else []
+            uid = uids[idx] if idx < len(uids) else f"rollout_{idx}"
+            score = scores[idx] if idx < len(scores) else 0.0
+            
+            # Skip empty conversation histories
+            if not conversation_history or len(conversation_history) == 0:
+                continue
+            
+            multiturn_samples.append({
+                "conversation_history": conversation_history,
+                "score": score,
+                "uid": uid
+            })
+        
+        # Log to wandb/swanlab if there are samples to log
+        if multiturn_samples:
+            self.validation_generations_logger.log_multiturn_generations(
+                loggers=self.config.trainer.logger,
+                multiturn_data=multiturn_samples,
+                step=self.global_steps,
+                phase="train"  # Training rollout phase
+            )
 
     def _maybe_log_val_generations(self, inputs, outputs, scores):
         """Log a table of validation samples to the configured logger (wandb or swanlab)"""
@@ -526,6 +578,9 @@ class RayPPOTrainer:
         sample_scores = []
         sample_turns = []
         sample_uids = []
+        
+        # Lists to collect multi-turn conversation data
+        multiturn_samples = []
 
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
@@ -621,8 +676,76 @@ class RayPPOTrainer:
                 sample_turns.append(test_batch.non_tensor_batch["__num_turns__"])
 
             data_source_lst.append(test_batch.non_tensor_batch.get("data_source", ["unknown"] * reward_tensor.shape[0]))
+            
+            # Collect multi-turn conversation data for detailed logging
+            # Support both conversation_history (from agent_loop) and messages (legacy format)
+            conversation_histories = test_batch.non_tensor_batch.get("conversation_history", None)
+            messages_list = test_batch.non_tensor_batch.get("messages", None)
+            multi_modal_inputs_list = test_batch.non_tensor_batch.get("multi_modal_inputs", None)
+            
+            # Prefer conversation_history if available (agent_loop format)
+            if conversation_histories is not None:
+                for idx in range(len(test_batch)):
+                    conversation_history = conversation_histories[idx] if idx < len(conversation_histories) else []
+                    sample_multi_modal = multi_modal_inputs_list[idx] if multi_modal_inputs_list is not None and idx < len(multi_modal_inputs_list) else None
+                    sample_uid = test_batch.non_tensor_batch["uid"][idx] if "uid" in test_batch.non_tensor_batch else None
+                    
+                    # Skip empty conversation histories
+                    if not conversation_history or len(conversation_history) == 0:
+                        continue
+                    
+                    multiturn_samples.append({
+                        "conversation_history": conversation_history,
+                        "multi_modal_inputs": sample_multi_modal,
+                        "score": scores[idx],
+                        "uid": sample_uid
+                    })
+            # Fallback to messages format (legacy)
+            elif messages_list is not None:
+                for idx in range(len(test_batch)):
+                    # Extract data for each sample
+                    sample_messages = messages_list[idx] if messages_list is not None else []
+                    sample_multi_modal = multi_modal_inputs_list[idx] if multi_modal_inputs_list is not None else None
+                    sample_uid = test_batch.non_tensor_batch["uid"][idx] if "uid" in test_batch.non_tensor_batch else None
+                    
+                    # Convert numpy array messages to list of dicts if needed
+                    if hasattr(sample_messages, '__iter__') and not isinstance(sample_messages, (str, dict)):
+                        # messages might be a list of Message objects or dicts
+                        processed_messages = []
+                        for msg in sample_messages:
+                            if hasattr(msg, 'model_dump'):
+                                # Pydantic model
+                                processed_messages.append(msg.model_dump())
+                            elif hasattr(msg, '__dict__'):
+                                # Object with dict attributes
+                                processed_messages.append(msg.__dict__)
+                            elif isinstance(msg, dict):
+                                processed_messages.append(msg)
+                            else:
+                                # Try to convert to dict
+                                try:
+                                    processed_messages.append(dict(msg))
+                                except:
+                                    processed_messages.append({"role": "unknown", "content": str(msg)})
+                        sample_messages = processed_messages
+                    
+                    multiturn_samples.append({
+                        "messages": sample_messages,
+                        "multi_modal_inputs": sample_multi_modal,
+                        "score": scores[idx],
+                        "uid": sample_uid
+                    })
 
         self._maybe_log_val_generations(inputs=sample_inputs, outputs=sample_outputs, scores=sample_scores)
+        
+        # Log multi-turn conversations if available
+        if multiturn_samples:
+            self.validation_generations_logger.log_multiturn_generations(
+                loggers=self.config.trainer.logger,
+                multiturn_data=multiturn_samples,
+                step=self.global_steps,
+                phase="val"  # Validation phase
+            )
 
         # dump generations
         val_data_dir = self.config.trainer.get("validation_data_dir", None)
@@ -1161,6 +1284,10 @@ class RayPPOTrainer:
                     rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
                     if rollout_data_dir:
                         self._log_rollout_data(batch, reward_extra_infos_dict, timing_raw, rollout_data_dir)
+                    
+                    # Log multi-turn rollout conversations to wandb/swanlab
+                    if self.config.actor_rollout_ref.rollout.multi_turn.enable:
+                        self._log_multiturn_rollout(batch)
 
                 # validate
                 if (

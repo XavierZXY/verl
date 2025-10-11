@@ -468,3 +468,216 @@ class ValidationGenerationsLogger:
         self.writer.add_text("val/generations", text_content, step)
         # Flush to ensure data is written
         self.writer.flush()
+
+    def log_multiturn_generations(self, loggers, multiturn_data, step, phase="val"):
+        """Log multi-turn conversation data with tool responses and images.
+        
+        Args:
+            loggers: List of logger names to use
+            multiturn_data: List of dicts, each containing:
+                - messages: List of message dicts with 'role' and 'content'
+                - multi_modal_inputs: Dict with 'image' key containing PIL images
+                - score: Final score for this rollout
+                - uid: Unique identifier for the sample
+            step: Current training step
+            phase: Phase of logging, either "train" or "val" (default: "val")
+        """
+        if "wandb" in loggers:
+            self._log_multiturn_to_wandb(multiturn_data, step, phase)
+        if "swanlab" in loggers:
+            self._log_multiturn_to_swanlab(multiturn_data, step, phase)
+
+    def _log_multiturn_to_wandb(self, multiturn_data, step, phase="val"):
+        """Log multi-turn conversations to wandb as a detailed table.
+        
+        Creates a table where each row represents a conversation turn, allowing
+        users to see the full flow of user → assistant → tool → assistant interactions.
+        
+        Args:
+            multiturn_data: List of conversation data
+            step: Current training step
+            phase: "train" or "val" to use different tables
+        """
+        import wandb
+
+        # Create table columns - added tool_name and tool_reward
+        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "cropped_image", "tool_reward", "score"]
+        
+        # Use different table instances for train and val
+        table_attr_name = f"multiturn_table_{phase}"
+        if not hasattr(self, table_attr_name):
+            setattr(self, table_attr_name, wandb.Table(columns=columns))
+        
+        # Create new table with existing data
+        existing_table = getattr(self, table_attr_name)
+        new_table = wandb.Table(columns=columns, data=existing_table.data)
+        
+        # Process each sample's multi-turn conversation
+        for sample_idx, sample_data in enumerate(multiturn_data):
+            # Support both formats: conversation_history (from training) and messages (from validation)
+            conversation_history = sample_data.get("conversation_history", [])
+            messages = sample_data.get("messages", [])
+            multi_modal_inputs = sample_data.get("multi_modal_inputs", {})
+            score = sample_data.get("score", None)
+            uid = sample_data.get("uid", f"sample_{sample_idx}")
+            
+            # If conversation_history is available (training rollout), use it
+            if conversation_history:
+                for turn_num, turn_data in enumerate(conversation_history):
+                    role = turn_data.get("role", "unknown")
+                    content = turn_data.get("content", "")
+                    tool_name = turn_data.get("tool_name", "")
+                    tool_reward = turn_data.get("tool_reward", None)
+                    tool_success = turn_data.get("tool_success", True)
+                    
+                    # Truncate long content for readability
+                    if len(content) > 500:
+                        content_display = content[:497] + "..."
+                    else:
+                        content_display = content
+                    
+                    # Get cropped images for tool responses
+                    cropped_images = turn_data.get("cropped_images", [])
+                    image_obj = None
+                    if role == "tool" and cropped_images:
+                        try:
+                            # Create a wandb Image from the first cropped image
+                            # If multiple images, we could create a caption or montage
+                            if len(cropped_images) == 1:
+                                image_obj = wandb.Image(cropped_images[0], caption=f"{tool_name}: {content_display[:100]}")
+                            else:
+                                # For multiple images, create a grid or log them separately
+                                import numpy as np
+                                from PIL import Image
+                                # Create a simple horizontal concatenation
+                                try:
+                                    widths, heights = zip(*(i.size for i in cropped_images))
+                                    total_width = sum(widths)
+                                    max_height = max(heights)
+                                    new_im = Image.new('RGB', (total_width, max_height))
+                                    x_offset = 0
+                                    for im in cropped_images:
+                                        new_im.paste(im, (x_offset, 0))
+                                        x_offset += im.width
+                                    image_obj = wandb.Image(new_im, caption=f"{tool_name}: {len(cropped_images)} images")
+                                except Exception as e:
+                                    # Fallback to first image
+                                    image_obj = wandb.Image(cropped_images[0], caption=f"{tool_name}: {len(cropped_images)} images")
+                        except Exception as e:
+                            print(f"Warning: Failed to convert cropped image to wandb.Image: {e}")
+                    
+                    # Add score only on the last turn
+                    turn_score = score if turn_num == len(conversation_history) - 1 else None
+                    
+                    # Add row to table
+                    new_table.add_data(
+                        step, 
+                        str(uid)[:12],  # Truncate uid for readability
+                        turn_num, 
+                        role, 
+                        content_display, 
+                        tool_name if tool_name else None,  # Use None instead of ""
+                        image_obj, 
+                        tool_reward if tool_reward is not None else None,  # Use None instead of ""
+                        turn_score
+                    )
+            
+            # Otherwise use messages format (validation)
+            elif messages:
+                # Get images if available from multi_modal_inputs
+                images = multi_modal_inputs.get("image", []) if multi_modal_inputs else []
+                image_idx = 0
+                
+                # Process each turn in the conversation
+                for turn_num, message in enumerate(messages):
+                    role = message.get("role", "unknown")
+                    content = message.get("content", "")
+                    
+                    # Format content for display
+                    if isinstance(content, list):
+                        # Multi-modal content (e.g., [{"type": "image"}, {"type": "text", "text": "..."}])
+                        text_parts = [item.get("text", "") for item in content if isinstance(item, dict) and item.get("type") == "text"]
+                        content_str = " ".join(text_parts) if text_parts else "[multimodal content]"
+                    elif isinstance(content, dict):
+                        content_str = str(content)
+                    else:
+                        content_str = str(content)
+                    
+                    # Truncate long content for readability
+                    if len(content_str) > 500:
+                        content_str = content_str[:497] + "..."
+                    
+                    # Get associated image for tool responses
+                    image_obj = None
+                    if role == "tool" and images and image_idx < len(images):
+                        try:
+                            # Convert PIL image to wandb Image
+                            image_obj = wandb.Image(images[image_idx])
+                            image_idx += 1
+                        except Exception as e:
+                            print(f"Warning: Failed to convert image to wandb.Image: {e}")
+                    
+                    # Add score only on the last turn
+                    turn_score = score if turn_num == len(messages) - 1 else None
+                    
+                    # Add row to table
+                    new_table.add_data(
+                        step, 
+                        str(uid)[:12] if uid else f"sample_{sample_idx}",
+                        turn_num, 
+                        role, 
+                        content_str, 
+                        None,  # tool_name - use None instead of ""
+                        image_obj, 
+                        None,  # tool_reward - use None instead of ""
+                        turn_score
+                    )
+        
+        # Log the table with phase-specific name
+        table_name = f"{phase}/multiturn_generations"
+        wandb.log({table_name: new_table}, step=step)
+        setattr(self, table_attr_name, new_table)
+
+    def _log_multiturn_to_swanlab(self, multiturn_data, step, phase="val"):
+        """Log multi-turn conversations to swanlab as a table.
+        
+        Args:
+            multiturn_data: List of conversation data
+            step: Current training step
+            phase: "train" or "val" to use different tables
+        """
+        import swanlab
+        
+        swanlab_table = swanlab.echarts.Table()
+        headers = ["step", "sample_id", "turn_num", "role", "content", "score"]
+        
+        rows = []
+        for sample_idx, sample_data in enumerate(multiturn_data):
+            messages = sample_data.get("messages", [])
+            score = sample_data.get("score", None)
+            
+            for turn_num, message in enumerate(messages):
+                role = message.get("role", "unknown")
+                content = message.get("content", "")
+                
+                # Format content
+                if isinstance(content, list):
+                    text_parts = [item.get("text", "") for item in content if isinstance(item, dict) and item.get("type") == "text"]
+                    content_str = " ".join(text_parts) if text_parts else "[multimodal content]"
+                elif isinstance(content, dict):
+                    content_str = str(content)
+                else:
+                    content_str = str(content)
+                
+                # Truncate long content
+                if len(content_str) > 300:
+                    content_str = content_str[:297] + "..."
+                
+                # Add score only on last turn
+                turn_score = score if turn_num == len(messages) - 1 else ""
+                
+                rows.append([step, sample_idx, turn_num, role, content_str, turn_score])
+        
+        swanlab_table.add(headers=headers, rows=rows)
+        table_name = f"{phase}/multiturn_generations"
+        swanlab.log({table_name: swanlab_table}, step=step)
