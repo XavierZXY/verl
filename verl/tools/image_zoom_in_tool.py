@@ -346,15 +346,16 @@ class ImageZoomInTool(BaseTool):
         bbox_2d = parameters.get("bbox_2d")
         label = parameters.get("label", "")
 
+        instance_data = self._instance_dict[instance_id]
+        image = instance_data["image"]
+        
         if not bbox_2d or len(bbox_2d) != 4:
             return (
                 ToolResponse(text="Error: bbox_2d parameter is missing or not a list of 4 numbers."),
                 -0.05,
-                {"success": False},
+                {"success": False, "original_image": image},
             )
 
-        instance_data = self._instance_dict[instance_id]
-        image = instance_data["image"]
         image_width, image_height = image.size
 
         try:
@@ -366,13 +367,13 @@ class ImageZoomInTool(BaseTool):
                     f"the minimum size of {self.MIN_DIMENSION}x{self.MIN_DIMENSION}."
                 )
                 logger.warning(f"Tool execution failed: {error_msg}")
-                return ToolResponse(text=error_msg), -0.05, {"success": False}
+                return ToolResponse(text=error_msg), -0.05, {"success": False, "original_image": image}
 
             cropped_image = image.crop(resized_bbox)
             logger.info(f"Cropped image size: {cropped_image.size}")
         except Exception as e:
             logger.error(f"Error processing image zoom-in: {e}")
-            return ToolResponse(text=f"Error processing image zoom-in: {e}"), -0.05, {"success": False}
+            return ToolResponse(text=f"Error processing image zoom-in: {e}"), -0.05, {"success": False, "original_image": image}
 
         response_text = f"Zoomed in on the image to the region {bbox_2d}."
         if label:
@@ -384,7 +385,7 @@ class ImageZoomInTool(BaseTool):
                 text=response_text,
             ),
             0.0,
-            {"success": True},
+            {"success": True, "original_image": image},  # Include original image for logging
         )
 
     async def release(self, instance_id: str, **kwargs) -> None:

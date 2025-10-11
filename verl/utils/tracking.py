@@ -500,8 +500,8 @@ class ValidationGenerationsLogger:
         """
         import wandb
 
-        # Create table columns - added tool_name and tool_reward
-        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "cropped_image", "tool_reward", "score"]
+        # Create table columns - added tool_name, original_image, cropped_image and tool_reward
+        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score"]
         
         # Use different table instances for train and val
         table_attr_name = f"multiturn_table_{phase}"
@@ -523,6 +523,7 @@ class ValidationGenerationsLogger:
             
             # If conversation_history is available (training rollout), use it
             if conversation_history:
+                print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
                 for turn_num, turn_data in enumerate(conversation_history):
                     role = turn_data.get("role", "unknown")
                     content = turn_data.get("content", "")
@@ -536,15 +537,35 @@ class ValidationGenerationsLogger:
                     else:
                         content_display = content
                     
-                    # Get cropped images for tool responses
+                    # Get original and cropped images for tool responses
+                    original_image = turn_data.get("original_image", None)
                     cropped_images = turn_data.get("cropped_images", [])
-                    image_obj = None
+                    
+                    print(f"[DEBUG] Turn {turn_num}: role={role}, has_original_image={original_image is not None}, "
+                          f"original_image_type={type(original_image)}, has_cropped_images={len(cropped_images) > 0}, "
+                          f"cropped_images_count={len(cropped_images)}")
+                    
+                    # Process original image
+                    original_image_obj = None
+                    if role == "tool" and original_image is not None:
+                        print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
+                              f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
+                        try:
+                            original_image_obj = wandb.Image(original_image, caption=f"Original - {tool_name}")
+                            print(f"[DEBUG] Successfully converted original_image to wandb.Image")
+                        except Exception as e:
+                            print(f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                    # Process cropped images
+                    cropped_image_obj = None
                     if role == "tool" and cropped_images:
                         try:
                             # Create a wandb Image from the first cropped image
                             # If multiple images, we could create a caption or montage
                             if len(cropped_images) == 1:
-                                image_obj = wandb.Image(cropped_images[0], caption=f"{tool_name}: {content_display[:100]}")
+                                cropped_image_obj = wandb.Image(cropped_images[0], caption=f"Cropped - {tool_name}: {content_display[:100]}")
                             else:
                                 # For multiple images, create a grid or log them separately
                                 import numpy as np
@@ -559,10 +580,10 @@ class ValidationGenerationsLogger:
                                     for im in cropped_images:
                                         new_im.paste(im, (x_offset, 0))
                                         x_offset += im.width
-                                    image_obj = wandb.Image(new_im, caption=f"{tool_name}: {len(cropped_images)} images")
+                                    cropped_image_obj = wandb.Image(new_im, caption=f"Cropped - {tool_name}: {len(cropped_images)} images")
                                 except Exception as e:
                                     # Fallback to first image
-                                    image_obj = wandb.Image(cropped_images[0], caption=f"{tool_name}: {len(cropped_images)} images")
+                                    cropped_image_obj = wandb.Image(cropped_images[0], caption=f"Cropped - {tool_name}: {len(cropped_images)} images")
                         except Exception as e:
                             print(f"Warning: Failed to convert cropped image to wandb.Image: {e}")
                     
@@ -570,6 +591,9 @@ class ValidationGenerationsLogger:
                     turn_score = score if turn_num == len(conversation_history) - 1 else None
                     
                     # Add row to table
+                    print(f"[DEBUG] Adding row to table: turn={turn_num}, role={role}, "
+                          f"has_original_image_obj={original_image_obj is not None}, "
+                          f"has_cropped_image_obj={cropped_image_obj is not None}")
                     new_table.add_data(
                         step, 
                         str(uid)[:12],  # Truncate uid for readability
@@ -577,7 +601,8 @@ class ValidationGenerationsLogger:
                         role, 
                         content_display, 
                         tool_name if tool_name else None,  # Use None instead of ""
-                        image_obj, 
+                        original_image_obj,  # Original image before tool processing
+                        cropped_image_obj,   # Cropped/processed image after tool
                         tool_reward if tool_reward is not None else None,  # Use None instead of ""
                         turn_score
                     )
@@ -628,7 +653,8 @@ class ValidationGenerationsLogger:
                         role, 
                         content_str, 
                         None,  # tool_name - use None instead of ""
-                        image_obj, 
+                        None,  # original_image - not available in legacy format
+                        image_obj,  # cropped_image (or tool result image)
                         None,  # tool_reward - use None instead of ""
                         turn_score
                     )

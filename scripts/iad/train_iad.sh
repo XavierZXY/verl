@@ -36,7 +36,7 @@ N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="TW-003-Tool-logtest"
+EXPERIMENT_NAME="TW-003-Tool-origin-crop-compare"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -45,7 +45,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     data.train_files=${DATASET_TRAIN} \
     data.val_files=[${DATASET_VAL}] \
     data.train_batch_size=${BATCH_SIZE} \
-    data.max_prompt_length=16384 \
+    data.max_prompt_length=8192 \
     data.max_response_length=16384 \
     data.return_raw_chat=True \
     data.filter_overlong_prompts=True \

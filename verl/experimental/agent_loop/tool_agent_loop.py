@@ -62,6 +62,22 @@ class AgentData:
         self.interaction = interaction
         self.interaction_kwargs = interaction_kwargs or {}
 
+        # Save original image for tool access
+        # Get the first image if it's a list, otherwise use the image directly
+        if image_data is not None:
+            if isinstance(image_data, list) and len(image_data) > 0:
+                self.original_image = image_data[0]
+            else:
+                self.original_image = image_data
+            logger.info(
+                f"[DEBUG] AgentData initialized with original_image: type={type(self.original_image)}, "
+                f"is_PIL={hasattr(self.original_image, 'size')}, "
+                f"size={getattr(self.original_image, 'size', None)}"
+            )
+        else:
+            self.original_image = None
+            logger.info(f"[DEBUG] AgentData initialized with original_image=None")
+
         # State variables
         self.prompt_ids: list[int] = []
         self.response_ids: list[int] = []
@@ -74,7 +90,7 @@ class AgentData:
 
         # Temporary state for tool calls
         self.tool_calls: list[FunctionCall] = []
-        
+
         # Multi-turn conversation tracking for logging
         self.conversation_history: list[dict[str, Any]] = []
 
@@ -179,11 +195,26 @@ class ToolAgentLoop(AgentLoopBase):
             metrics=agent_data.metrics,
             extra_fields={},
         )
-        output.extra_fields.update({
-            "turn_scores": agent_data.turn_scores,
-            "tool_rewards": agent_data.tool_rewards,
-            "conversation_history": agent_data.conversation_history,
-        })
+        # Debug: log conversation_history before returning
+        logger.debug(f"[DEBUG] Final conversation_history has {len(agent_data.conversation_history)} entries")
+        for i, entry in enumerate(agent_data.conversation_history):
+            has_original_img = "original_image" in entry
+            has_cropped_imgs = "cropped_images" in entry
+            original_img_type = type(entry.get("original_image")) if has_original_img else None
+            logger.debug(
+                f"[DEBUG] conversation_history[{i}]: role={entry.get('role')}, "
+                f"has_original_image={has_original_img}, original_img_type={original_img_type}, "
+                f"has_cropped_images={has_cropped_imgs}, "
+                f"cropped_images_count={len(entry.get('cropped_images', []))}"
+            )
+
+        output.extra_fields.update(
+            {
+                "turn_scores": agent_data.turn_scores,
+                "tool_rewards": agent_data.tool_rewards,
+                "conversation_history": agent_data.conversation_history,
+            }
+        )
         return output
 
     async def _handle_pending_state(self, agent_data: AgentData, sampling_params: dict[str, Any]) -> AgentState:
@@ -239,13 +270,15 @@ class ToolAgentLoop(AgentLoopBase):
         assistant_message_text = await self.loop.run_in_executor(
             None, lambda: self.tokenizer.decode(agent_data.response_ids, skip_special_tokens=True)
         )
-        
+
         # Record to conversation history for logging
-        agent_data.conversation_history.append({
-            "role": "assistant",
-            "content": assistant_message_text,
-            "turn": agent_data.assistant_turns,
-        })
+        agent_data.conversation_history.append(
+            {
+                "role": "assistant",
+                "content": assistant_message_text,
+                "turn": agent_data.assistant_turns,
+            }
+        )
 
         # Check termination conditions
         if not ignore_termination and len(agent_data.response_mask) >= self.response_length:
@@ -278,7 +311,7 @@ class ToolAgentLoop(AgentLoopBase):
 
         tasks = []
         for tool_call in agent_data.tool_calls[: self.max_parallel_calls]:
-            tasks.append(self._call_tool(tool_call, agent_data.tools_kwargs))
+            tasks.append(self._call_tool(tool_call, agent_data))
 
         with simple_timer("tool_calls", agent_data.metrics):
             responses = await asyncio.gather(*tasks)
@@ -309,7 +342,7 @@ class ToolAgentLoop(AgentLoopBase):
 
             add_messages.append(message)
             agent_data.messages.extend(add_messages)
-            
+
             # Record tool response to conversation history for logging
             tool_history_entry = {
                 "role": "tool",
@@ -318,7 +351,20 @@ class ToolAgentLoop(AgentLoopBase):
                 "tool_name": agent_data.tool_calls[idx].name if idx < len(agent_data.tool_calls) else "unknown",
                 "tool_success": tool_metadata.get("success", True),
             }
-            
+
+            # Add original image directly from agent_data for tracking
+            # This ensures we always have the correct original image for comparison
+            if agent_data.original_image is not None:
+                tool_history_entry["original_image"] = agent_data.original_image
+                logger.debug(
+                    f"[DEBUG] Added original_image to tool_history_entry[{idx}]: "
+                    f"type={type(agent_data.original_image)}, "
+                    f"is_PIL={hasattr(agent_data.original_image, 'size')}, "
+                    f"size={getattr(agent_data.original_image, 'size', None)}"
+                )
+            else:
+                logger.warning(f"[DEBUG] agent_data.original_image is None for tool_history_entry[{idx}]")
+
             # Handle image data
             if tool_response.image:
                 if agent_data.image_data is None:
@@ -341,7 +387,7 @@ class ToolAgentLoop(AgentLoopBase):
                         agent_data.image_data.append(tool_response.image)
                         new_images_this_turn.append(tool_response.image)  # Using local variable
                         cropped_images_for_logging.append(tool_response.image)
-                
+
                 # Add cropped images to history entry
                 tool_history_entry["cropped_images"] = cropped_images_for_logging
 
@@ -356,7 +402,7 @@ class ToolAgentLoop(AgentLoopBase):
             if tool_reward is not None:
                 agent_data.tool_rewards.append(tool_reward)
                 tool_history_entry["tool_reward"] = tool_reward
-            
+
             # Add to conversation history
             agent_data.conversation_history.append(tool_history_entry)
 
@@ -442,9 +488,7 @@ class ToolAgentLoop(AgentLoopBase):
         else:
             return AgentState.GENERATING
 
-    async def _call_tool(
-        self, tool_call: FunctionCall, tools_kwargs: dict[str, Any]
-    ) -> tuple[ToolResponse, float, dict]:
+    async def _call_tool(self, tool_call: FunctionCall, agent_data: AgentData) -> tuple[ToolResponse, float, dict]:
         """Call tool and return tool response."""
         tool, instance_id = None, None
         try:
@@ -452,8 +496,17 @@ class ToolAgentLoop(AgentLoopBase):
             tool_name = tool_call.name
             tool_args = json.loads(tool_call.arguments)
             tool = self.tools[tool_name]
-            kwargs = tools_kwargs.get(tool_name, {})
-            instance_id, _ = await tool.create(create_kwargs=kwargs.get("create_kwargs", {}))
+
+            # Prepare create_kwargs with image data
+            kwargs = agent_data.tools_kwargs.get(tool_name, {})
+            create_kwargs = kwargs.get("create_kwargs", {})
+
+            # Add original image data to create_kwargs if available
+            # Use original_image to ensure each tool call gets the same original image
+            if agent_data.original_image is not None:
+                create_kwargs["image"] = agent_data.original_image
+
+            instance_id, _ = await tool.create(create_kwargs=create_kwargs)
             tool_execution_response, tool_reward, res = await tool.execute(instance_id, tool_args)
         except Exception as e:
             logger.warning(f"Error when executing tool: {e}")

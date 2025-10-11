@@ -53,7 +53,7 @@ SYSTEM_PROMPT: str = (
     'helped you make the final decision (e.g., "After zooming in, the spot is clearly a small, pitted hole in the surface.").\n'
     "2.  **`<location></location>`**: Provide a JSON list of all detected defect locations (defect only, not the whole object).\n"
     '    - Must use "bbox2d" key with [x_min, y_min, x_max, y_max] coordinates.\n'
-    "    - Maximum of 3 bounding boxes.\n"
+    "    - Maximum of 3 bounding boxes. You should always remember this rule.\n"
     '    - Example: [{"bbox2d": [100, 150, 200, 250]}]\n'
     "3.  **`<type></type>`**: Specify the defect type from the list: \"crack\", \"discoloration\", \"scratch\", \"hole\", \"surface\", \"other\". "
     'Use "unspecified" if uncertain.\n'
@@ -793,7 +793,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
 
     # Final score calculation with smooth combination
     # Weighted combination: format (30%), acc (30%), bbox (30%), tool (10%)
-    raw_score = 0.5 * format_reward + 0.5 * acc_reward + 0.5 * bbox_reward + 0.3 * tool_reward
+    raw_score = 0.5 * format_reward + 0.5 * acc_reward + 0.5 * bbox_reward + 1.0 * tool_reward
 
     # Apply final smoothing to prevent extreme gradients
     final_score = _clip_and_normalize_reward(raw_score, min_val=-0.5, max_val=1.0)
