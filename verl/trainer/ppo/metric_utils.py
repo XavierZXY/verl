@@ -93,6 +93,8 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         A dictionary of metrics including:
             - critic/score/mean, max, min: Statistics about sequence scores
             - critic/rewards/mean, max, min: Statistics about sequence rewards
+            - critic/rewards/at_max_count, at_min_count: Count of rewards at max/min values
+            - critic/rewards/at_max_ratio, at_min_ratio: Ratio of rewards at max/min values
             - critic/advantages/mean, max, min: Statistics about advantages
             - critic/returns/mean, max, min: Statistics about returns
             - critic/values/mean, max, min: Statistics about critic values (if use_critic=True)
@@ -131,6 +133,12 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
     reward_mean = torch.mean(non_aborted_sequence_reward).detach().item()
     reward_max = torch.max(non_aborted_sequence_reward).detach().item()
     reward_min = torch.min(non_aborted_sequence_reward).detach().item()
+    
+    # Count how many rewards are at min/max values
+    reward_at_max_count = torch.sum(non_aborted_sequence_reward == reward_max).detach().item()
+    reward_at_min_count = torch.sum(non_aborted_sequence_reward == reward_min).detach().item()
+    reward_at_max_ratio = reward_at_max_count / len(non_aborted_sequence_reward) if len(non_aborted_sequence_reward) > 0 else 0.0
+    reward_at_min_ratio = reward_at_min_count / len(non_aborted_sequence_reward) if len(non_aborted_sequence_reward) > 0 else 0.0
 
     valid_adv = torch.masked_select(advantages, response_mask)
     valid_returns = torch.masked_select(returns, response_mask)
@@ -165,6 +173,10 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
         "critic/rewards/mean": reward_mean,
         "critic/rewards/max": reward_max,
         "critic/rewards/min": reward_min,
+        "critic/rewards/at_max_count": reward_at_max_count,
+        "critic/rewards/at_min_count": reward_at_min_count,
+        "critic/rewards/at_max_ratio": reward_at_max_ratio,
+        "critic/rewards/at_min_ratio": reward_at_min_ratio,
         # adv
         "critic/advantages/mean": torch.mean(valid_adv).detach().item(),
         "critic/advantages/max": torch.max(valid_adv).detach().item(),
