@@ -21,7 +21,7 @@ DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_enhan
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mini/mini_8.parquet
 DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/test/test.parquet
 # DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/test/test_enhanced.parquet
-REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-3B-Instruct
+REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=10
@@ -36,7 +36,7 @@ N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="TW-003-Tool-origin-crop-compare"
+EXPERIMENT_NAME="TW-debug-bbox-iou"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

@@ -645,12 +645,12 @@ class RayPPOTrainer:
             sample_outputs.extend(output_texts)
 
             # debug: Print validation generations
-            print(f"[Validation Step {self.global_steps}] Sample generations (Total: {len(output_texts)} samples):")
-            # Print only first 3 samples to avoid cluttering the terminal
-            for idx, output in enumerate(output_texts[:3]):
-                print(f"  Sample {idx + 1}: {output}")
-            if len(output_texts) > 3:
-                print(f"  ... (and {len(output_texts) - 3} more samples)")
+            # print(f"[Validation Step {self.global_steps}] Sample generations (Total: {len(output_texts)} samples):")
+            # # Print only first 3 samples to avoid cluttering the terminal
+            # for idx, output in enumerate(output_texts[:3]):
+            #     print(f"  Sample {idx + 1}: {output}")
+            # if len(output_texts) > 3:
+            #     print(f"  ... (and {len(output_texts) - 3} more samples)")
             # debug end
             
             test_batch = test_batch.union(test_output_gen_batch)
@@ -1164,13 +1164,13 @@ class RayPPOTrainer:
                     batch = batch.union(gen_batch_output)
                     
                     # debug: print the batch
-                    outputs_temp = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
-                    print(f"[Training Step {self.global_steps}] Sample generations (Total: {len(outputs_temp)} samples):")
-                    # Print only first 3 samples to avoid cluttering the terminal
-                    for idx, output in enumerate(outputs_temp[:3]):
-                        print(f"  Sample {idx + 1}: {output}")
-                    if len(outputs_temp) > 3:
-                        print(f"  ... (and {len(outputs_temp) - 3} more samples)")
+                    # outputs_temp = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
+                    # print(f"[Training Step {self.global_steps}] Sample generations (Total: {len(outputs_temp)} samples):")
+                    # # Print only first 3 samples to avoid cluttering the terminal
+                    # for idx, output in enumerate(outputs_temp[:3]):
+                    #     print(f"  Sample {idx + 1}: {output}")
+                    # if len(outputs_temp) > 3:
+                    #     print(f"  ... (and {len(outputs_temp) - 3} more samples)")
                     # debug end
 
                     if "response_mask" not in batch.batch.keys():
