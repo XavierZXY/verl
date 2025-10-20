@@ -501,7 +501,7 @@ class ValidationGenerationsLogger:
         import wandb
 
         # Create table columns - added tool_name, original_image, cropped_image and tool_reward
-        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score"]
+        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score", "bbox_iou"]
         
         # Use different table instances for train and val
         table_attr_name = f"multiturn_table_{phase}"
@@ -518,6 +518,7 @@ class ValidationGenerationsLogger:
             conversation_history = sample_data.get("conversation_history", [])
             messages = sample_data.get("messages", [])
             multi_modal_inputs = sample_data.get("multi_modal_inputs", {})
+            bbox_iou = sample_data.get("bbox_iou", None)
             score = sample_data.get("score", None)
             uid = sample_data.get("uid", f"sample_{sample_idx}")
             
@@ -528,7 +529,7 @@ class ValidationGenerationsLogger:
                     role = turn_data.get("role", "unknown")
                     content = turn_data.get("content", "")
                     tool_name = turn_data.get("tool_name", "")
-                    tool_reward = turn_data.get("tool_reward", None)
+                    tool_reward = sample_data.get("tool_reward", None)
                     tool_success = turn_data.get("tool_success", True)
                     
                     # Truncate long content for readability
@@ -604,7 +605,8 @@ class ValidationGenerationsLogger:
                         original_image_obj,  # Original image before tool processing
                         cropped_image_obj,   # Cropped/processed image after tool
                         tool_reward if tool_reward is not None else None,  # Use None instead of ""
-                        turn_score
+                        turn_score, 
+                        bbox_iou if bbox_iou is not None else None
                     )
             
             # Otherwise use messages format (validation)
