@@ -595,6 +595,10 @@ class ValidationGenerationsLogger:
                     print(f"[DEBUG] Adding row to table: turn={turn_num}, role={role}, "
                           f"has_original_image_obj={original_image_obj is not None}, "
                           f"has_cropped_image_obj={cropped_image_obj is not None}")
+                    
+                    # Add bbox_iou only on the last turn
+                    turn_bbox_iou = bbox_iou if turn_num == len(conversation_history) - 1 else None
+                    
                     new_table.add_data(
                         step, 
                         str(uid)[:12],  # Truncate uid for readability
@@ -605,8 +609,8 @@ class ValidationGenerationsLogger:
                         original_image_obj,  # Original image before tool processing
                         cropped_image_obj,   # Cropped/processed image after tool
                         tool_reward if tool_reward is not None else None,  # Use None instead of ""
-                        turn_score, 
-                        bbox_iou if bbox_iou is not None else None
+                        turn_score,
+                        turn_bbox_iou,  # bbox_iou
                     )
             
             # Otherwise use messages format (validation)
@@ -647,6 +651,9 @@ class ValidationGenerationsLogger:
                     # Add score only on the last turn
                     turn_score = score if turn_num == len(messages) - 1 else None
                     
+                    # Add bbox_iou only on the last turn
+                    turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else None
+                    
                     # Add row to table
                     new_table.add_data(
                         step, 
@@ -658,7 +665,8 @@ class ValidationGenerationsLogger:
                         None,  # original_image - not available in legacy format
                         image_obj,  # cropped_image (or tool result image)
                         None,  # tool_reward - use None instead of ""
-                        turn_score
+                        turn_score,
+                        turn_bbox_iou,  # bbox_iou
                     )
         
         # Log the table with phase-specific name
@@ -677,12 +685,13 @@ class ValidationGenerationsLogger:
         import swanlab
         
         swanlab_table = swanlab.echarts.Table()
-        headers = ["step", "sample_id", "turn_num", "role", "content", "score"]
+        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou"]
         
         rows = []
         for sample_idx, sample_data in enumerate(multiturn_data):
             messages = sample_data.get("messages", [])
             score = sample_data.get("score", None)
+            bbox_iou = sample_data.get("bbox_iou", None)
             
             for turn_num, message in enumerate(messages):
                 role = message.get("role", "unknown")
@@ -701,10 +710,11 @@ class ValidationGenerationsLogger:
                 if len(content_str) > 300:
                     content_str = content_str[:297] + "..."
                 
-                # Add score only on last turn
+                # Add score and bbox_iou only on last turn
                 turn_score = score if turn_num == len(messages) - 1 else ""
+                turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else ""
                 
-                rows.append([step, sample_idx, turn_num, role, content_str, turn_score])
+                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou])
         
         swanlab_table.add(headers=headers, rows=rows)
         table_name = f"{phase}/multiturn_generations"

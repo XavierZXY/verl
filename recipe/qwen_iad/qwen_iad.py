@@ -648,12 +648,14 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Part 2: Compute bbox IoU from tool_call parameters
     bbox_iou = 0.0
     if has_tool_usage:
-        # Extract all bboxes from tool_call arguments
+        # Extract bbox from the last tool_call only
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
         tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
         
         pred_boxes = []
-        for tool_call_content in tool_calls:
+        # Only process the last tool_call
+        if tool_calls:
+            tool_call_content = tool_calls[-1]
             try:
                 tool_data = json.loads(tool_call_content.strip())
                 # Extract bbox_2d from arguments
@@ -663,7 +665,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                     if bbox and isinstance(bbox, list) and len(bbox) == 4:
                         pred_boxes.append([float(v) for v in bbox])
             except (json.JSONDecodeError, ValueError, TypeError):
-                continue
+                pass
         
         if pred_boxes:
             # Get ground truth bboxes

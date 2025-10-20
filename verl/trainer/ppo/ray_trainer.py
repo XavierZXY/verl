@@ -491,6 +491,10 @@ class RayPPOTrainer:
         uids = batch.non_tensor_batch.get("uid", [])
         scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
         
+        # Extract reward components if available
+        bbox_ious = batch.non_tensor_batch.get("bbox_iou", None)
+        tool_rewards = batch.non_tensor_batch.get("tool_reward", None)
+        
         # Get rollout.n (number of rollouts per sample)
         n_rollouts = self.config.actor_rollout_ref.rollout.n
         
@@ -511,11 +515,19 @@ class RayPPOTrainer:
             if not conversation_history or len(conversation_history) == 0:
                 continue
             
-            multiturn_samples.append({
+            sample_dict = {
                 "conversation_history": conversation_history,
                 "score": score,
                 "uid": uid
-            })
+            }
+            
+            # Add reward components if available
+            if bbox_ious is not None and idx < len(bbox_ious):
+                sample_dict["bbox_iou"] = float(bbox_ious[idx])
+            if tool_rewards is not None and idx < len(tool_rewards):
+                sample_dict["tool_reward"] = float(tool_rewards[idx])
+            
+            multiturn_samples.append(sample_dict)
         
         # Log to wandb/swanlab if there are samples to log
         if multiturn_samples:
@@ -683,6 +695,10 @@ class RayPPOTrainer:
             messages_list = test_batch.non_tensor_batch.get("messages", None)
             multi_modal_inputs_list = test_batch.non_tensor_batch.get("multi_modal_inputs", None)
             
+            # Extract reward components if available
+            bbox_ious = test_batch.non_tensor_batch.get("bbox_iou", None)
+            tool_rewards = test_batch.non_tensor_batch.get("tool_reward", None)
+            
             # Prefer conversation_history if available (agent_loop format)
             if conversation_histories is not None:
                 for idx in range(len(test_batch)):
@@ -694,12 +710,20 @@ class RayPPOTrainer:
                     if not conversation_history or len(conversation_history) == 0:
                         continue
                     
-                    multiturn_samples.append({
+                    sample_dict = {
                         "conversation_history": conversation_history,
                         "multi_modal_inputs": sample_multi_modal,
                         "score": scores[idx],
                         "uid": sample_uid
-                    })
+                    }
+                    
+                    # Add reward components if available
+                    if bbox_ious is not None and idx < len(bbox_ious):
+                        sample_dict["bbox_iou"] = float(bbox_ious[idx])
+                    if tool_rewards is not None and idx < len(tool_rewards):
+                        sample_dict["tool_reward"] = float(tool_rewards[idx])
+                    
+                    multiturn_samples.append(sample_dict)
             # Fallback to messages format (legacy)
             elif messages_list is not None:
                 for idx in range(len(test_batch)):
@@ -729,12 +753,20 @@ class RayPPOTrainer:
                                     processed_messages.append({"role": "unknown", "content": str(msg)})
                         sample_messages = processed_messages
                     
-                    multiturn_samples.append({
+                    sample_dict = {
                         "messages": sample_messages,
                         "multi_modal_inputs": sample_multi_modal,
                         "score": scores[idx],
                         "uid": sample_uid
-                    })
+                    }
+                    
+                    # Add reward components if available
+                    if bbox_ious is not None and idx < len(bbox_ious):
+                        sample_dict["bbox_iou"] = float(bbox_ious[idx])
+                    if tool_rewards is not None and idx < len(tool_rewards):
+                        sample_dict["tool_reward"] = float(tool_rewards[idx])
+                    
+                    multiturn_samples.append(sample_dict)
 
         self._maybe_log_val_generations(inputs=sample_inputs, outputs=sample_outputs, scores=sample_scores)
         
