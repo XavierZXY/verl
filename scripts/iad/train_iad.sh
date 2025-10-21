@@ -26,18 +26,18 @@ REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=5
-BATCH_SIZE=64
-PPO_BATCH_SIZE=64
-MICRO_BATCH_SIZE=8
+BATCH_SIZE=32
+PPO_BATCH_SIZE=32
+MICRO_BATCH_SIZE=4
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.3
 N_GPUS_PER_NODE=8
-N_ROLLOUT=8
+N_ROLLOUT=16
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="TW-reward-1--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="TW-0.3format_reward-0.7acc_reward-0.4tool_reward--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -92,7 +92,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
     trainer.save_freq=50 \
-    trainer.test_freq=3 \
+    trainer.test_freq=5 \
     trainer.validation_data_dir=${BASEDIR}/logs/validation_data/${EXPERIMENT_NAME} \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \

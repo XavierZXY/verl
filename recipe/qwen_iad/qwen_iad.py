@@ -750,7 +750,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
-    final_score = 0.2 * format_reward + 0.3 * acc_reward + 0.1 * tool_reward
+    final_score = 0.3 * format_reward + 0.7 * acc_reward + 0.4 * tool_reward
     
     # Log for debugging
     logger.debug(
