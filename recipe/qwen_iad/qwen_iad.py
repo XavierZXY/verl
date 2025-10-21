@@ -352,8 +352,8 @@ def _bbox_iou_xyxy(box_a, box_b):
 
 def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
     """
-    Improved IoU-based reward calculation with proper union computation.
-    Limits predicted boxes to max_pred_boxes and uses proper IoU formula.
+    IoU-based reward calculation focusing on precision (how accurate predictions are).
+    Returns the average IoU of predicted boxes matched to ground truth boxes.
     """
     # Limit predicted boxes to avoid excessive outputs
     if len(pred_boxes) > max_pred_boxes:
@@ -364,7 +364,7 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
         return 1.0
     if len(gt_boxes) == 0 and len(pred_boxes) > 0:
         # Penalty for false positive detections
-        return max(0.0, 1.0 - 0.2 * len(pred_boxes))
+        return 0.0
     if len(gt_boxes) > 0 and len(pred_boxes) == 0:
         # Penalty for missing detections
         return 0.0
@@ -385,16 +385,7 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
 
         return inter_area / union_area if union_area > 0 else 0.0
 
-    # Compute best matching IoU for each GT box
-    gt_ious = []
-    for gt_box in gt_boxes:
-        best_iou = 0.0
-        for pred_box in pred_boxes:
-            iou = compute_proper_iou(gt_box, pred_box)
-            best_iou = max(best_iou, iou)
-        gt_ious.append(best_iou)
-
-    # Compute best matching IoU for each predicted box
+    # Compute best matching IoU for each predicted box (precision metric)
     pred_ious = []
     for pred_box in pred_boxes:
         best_iou = 0.0
@@ -403,25 +394,9 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
             best_iou = max(best_iou, iou)
         pred_ious.append(best_iou)
 
-    # Use the average of both directions, weighted by recall and precision
-    recall = sum(gt_ious) / len(gt_ious) if gt_ious else 0.0
+    # Return average IoU directly (precision: how accurate are the predictions)
     precision = sum(pred_ious) / len(pred_ious) if pred_ious else 0.0
-
-    # F1-score like combination
-    if recall + precision > 0:
-        f1_score = 2 * (recall * precision) / (recall + precision)
-    else:
-        f1_score = 0.0
-
-    # Apply progressive IoU thresholds for better reward shaping
-    if f1_score >= 0.7:
-        return 1.0
-    elif f1_score >= 0.5:
-        return 0.8 + 0.2 * (f1_score - 0.5) / 0.2
-    elif f1_score >= 0.3:
-        return 0.5 + 0.3 * (f1_score - 0.3) / 0.2
-    else:
-        return f1_score / 0.3 * 0.5
+    return precision
 
 
 def _extract_ground_truth_answer(ground_truth, extra_info):
@@ -560,9 +535,9 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     Compute reward score for defect detection task.
 
     The score consists of three components:
-    1. Format reward: Hard reward (1.0 if no errors, -1.0 if any errors)
-    2. Answer correctness reward: Hard reward (1.0 if match, -1.0 otherwise)
-    3. Tool reward: Combination of tool usage (-1 or 1) and bbox IoU
+    1. Format reward: Hard reward (1.0 if no errors, 0.0 if any errors)
+    2. Answer correctness reward: Hard reward (1.0 if match, 0.0 otherwise)
+    3. Tool reward: Combination of tool usage (0.0 or 1.0) and bbox IoU
 
     Args:
         data_source: Source of the data (not used currently)
@@ -613,7 +588,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     if count_type_1 != count_type_2:
         is_format_error = True
     
-    format_reward = 1.0 if not is_format_error else -1.0
+    format_reward = 1.0 if not is_format_error else 0.0
     
     # 2. Extract answer and compute acc_reward
     answer_text = ""
@@ -631,19 +606,19 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         
         # Check if ground_truth is "yes" or "no"
         if "yes" in ground_truth_normalized:
-            acc_reward = 1.0 if "yes" in answer_normalized else -1.0
+            acc_reward = 1.0 if "yes" in answer_normalized else 0.0
         elif "no" in ground_truth_normalized:
-            acc_reward = 1.0 if "no" in answer_normalized else -1.0
+            acc_reward = 1.0 if "no" in answer_normalized else 0.0
         else:
             # Fallback to exact matching if ground_truth is not yes/no
             acc_reward = 1.0 if answer_normalized == ground_truth_normalized else -1.0
     else:
-        acc_reward = -1.0
+        acc_reward = 0.0
     
     # 3. Tool reward: combination of tool usage and bbox IoU
     # Part 1: Check if tools were called
     has_tool_usage = count_tool_call_1 > 0
-    tool_usage_reward = 1.0 if has_tool_usage else -1.0
+    tool_usage_reward = 1.0 if has_tool_usage else 0.0
     
     # Part 2: Compute bbox IoU from tool_call parameters
     bbox_iou = 0.0
@@ -678,7 +653,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
-    final_score = 0.5 * format_reward + 0.5 * acc_reward + 1.0 * tool_reward
+    final_score = 0.25 * format_reward + 0.25 * acc_reward + 0.5 * tool_reward
     
     # Log for debugging
     logger.debug(
