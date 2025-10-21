@@ -500,8 +500,8 @@ class ValidationGenerationsLogger:
         """
         import wandb
 
-        # Create table columns - added tool_name, original_image, cropped_image and tool_reward
-        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score", "bbox_iou"]
+        # Create table columns - added tool_name, original_image, cropped_image and reward components
+        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score", "bbox_iou", "acc_reward"]
         
         # Use different table instances for train and val
         table_attr_name = f"multiturn_table_{phase}"
@@ -596,8 +596,9 @@ class ValidationGenerationsLogger:
                     #       f"has_original_image_obj={original_image_obj is not None}, "
                     #       f"has_cropped_image_obj={cropped_image_obj is not None}")
                     
-                    # Add bbox_iou only on the last turn
+                    # Add reward components only on the last turn
                     turn_bbox_iou = bbox_iou if turn_num == len(conversation_history) - 1 else None
+                    turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(conversation_history) - 1 else None
                     
                     new_table.add_data(
                         step, 
@@ -611,6 +612,7 @@ class ValidationGenerationsLogger:
                         tool_reward if tool_reward is not None else None,  # Use None instead of ""
                         turn_score,
                         turn_bbox_iou,  # bbox_iou
+                        turn_acc_reward,  # acc_reward
                     )
             
             # Otherwise use messages format (validation)
@@ -651,8 +653,9 @@ class ValidationGenerationsLogger:
                     # Add score only on the last turn
                     turn_score = score if turn_num == len(messages) - 1 else None
                     
-                    # Add bbox_iou only on the last turn
+                    # Add reward components only on the last turn
                     turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else None
+                    turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(messages) - 1 else None
                     
                     # Add row to table
                     new_table.add_data(
@@ -667,6 +670,7 @@ class ValidationGenerationsLogger:
                         None,  # tool_reward - use None instead of ""
                         turn_score,
                         turn_bbox_iou,  # bbox_iou
+                        turn_acc_reward,  # acc_reward
                     )
         
         # Log the table with phase-specific name
@@ -685,13 +689,14 @@ class ValidationGenerationsLogger:
         import swanlab
         
         swanlab_table = swanlab.echarts.Table()
-        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou"]
+        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou", "acc_reward"]
         
         rows = []
         for sample_idx, sample_data in enumerate(multiturn_data):
             messages = sample_data.get("messages", [])
             score = sample_data.get("score", None)
             bbox_iou = sample_data.get("bbox_iou", None)
+            acc_reward = sample_data.get("acc_reward", None)
             
             for turn_num, message in enumerate(messages):
                 role = message.get("role", "unknown")
@@ -710,11 +715,12 @@ class ValidationGenerationsLogger:
                 if len(content_str) > 300:
                     content_str = content_str[:297] + "..."
                 
-                # Add score and bbox_iou only on last turn
+                # Add score and reward components only on last turn
                 turn_score = score if turn_num == len(messages) - 1 else ""
                 turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else ""
+                turn_acc_reward = acc_reward if turn_num == len(messages) - 1 else ""
                 
-                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou])
+                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou, turn_acc_reward])
         
         swanlab_table.add(headers=headers, rows=rows)
         table_name = f"{phase}/multiturn_generations"

@@ -494,6 +494,7 @@ class RayPPOTrainer:
         # Extract reward components if available
         bbox_ious = batch.non_tensor_batch.get("bbox_iou", None)
         tool_rewards = batch.non_tensor_batch.get("tool_reward", None)
+        acc_rewards = batch.non_tensor_batch.get("acc_reward", None)
         
         # Get rollout.n (number of rollouts per sample)
         n_rollouts = self.config.actor_rollout_ref.rollout.n
@@ -526,6 +527,8 @@ class RayPPOTrainer:
                 sample_dict["bbox_iou"] = float(bbox_ious[idx])
             if tool_rewards is not None and idx < len(tool_rewards):
                 sample_dict["tool_reward"] = float(tool_rewards[idx])
+            if acc_rewards is not None and idx < len(acc_rewards):
+                sample_dict["acc_reward"] = float(acc_rewards[idx])
             
             multiturn_samples.append(sample_dict)
         
@@ -698,6 +701,7 @@ class RayPPOTrainer:
             # Extract reward components if available
             bbox_ious = test_batch.non_tensor_batch.get("bbox_iou", None)
             tool_rewards = test_batch.non_tensor_batch.get("tool_reward", None)
+            acc_rewards = test_batch.non_tensor_batch.get("acc_reward", None)
             
             # Prefer conversation_history if available (agent_loop format)
             if conversation_histories is not None:
@@ -722,6 +726,8 @@ class RayPPOTrainer:
                         sample_dict["bbox_iou"] = float(bbox_ious[idx])
                     if tool_rewards is not None and idx < len(tool_rewards):
                         sample_dict["tool_reward"] = float(tool_rewards[idx])
+                    if acc_rewards is not None and idx < len(acc_rewards):
+                        sample_dict["acc_reward"] = float(acc_rewards[idx])
                     
                     multiturn_samples.append(sample_dict)
             # Fallback to messages format (legacy)
@@ -765,6 +771,8 @@ class RayPPOTrainer:
                         sample_dict["bbox_iou"] = float(bbox_ious[idx])
                     if tool_rewards is not None and idx < len(tool_rewards):
                         sample_dict["tool_reward"] = float(tool_rewards[idx])
+                    if acc_rewards is not None and idx < len(acc_rewards):
+                        sample_dict["acc_reward"] = float(acc_rewards[idx])
                     
                     multiturn_samples.append(sample_dict)
 
