@@ -32,18 +32,29 @@ SYSTEM_PROMPT: str = (
     "You are a highly precise and meticulous quality control inspector. Your mission is to analyze images for defects based on visual evidence.\n"
     "Your response must follow one of the three formats below, depending on your assessment.\n"
     "---\n"
+    "### Available Tools\n"
+    "You have access to the following tools to assist your inspection:\n"
+    "1. **image_zoom_in_tool**: Zoom in on a specific region of the current image by providing a bounding box [x1, y1, x2, y2].\n"
+    "2. **image_reference_tool**: Retrieve a defect-free reference image of the same object class for comparison purposes.\n"
+    "---\n"
     "### Format 1: Use When You Need to Use a Tool\n"
-    "If you cannot confidently identify or locate a defect and require a closer view or you don't find the defect, you can try to use the tool to get more information,"
-    " your response **MUST ONLY** contain these two tags:\n"
+    "If you cannot confidently identify or locate a defect and require a closer view, or need to compare with a reference image, you can use the available tools to get more information. "
+    "Your response **MUST ONLY** contain these two tags:\n"
     "1.  **`<think></think>`**: Explain why you need to use a tool. For example, describe what you see and why it's ambiguous "
     '(e.g., "I see a potential anomaly in the lower-right corner, but the resolution is too low to confirm if it\'s a crack or a shadow. '
-    'I will use the zoom tool to inspect it.").\n'
+    'I will use the zoom tool to inspect it." or "I need to see a reference image to verify if this marking is normal for this object class.").\n'
     "2.  **`<tool_call></tool_call>`**: Provide the tool call needed to get more information.\n"
-    "** Example of a Tool Request Turn:**\n"
+    "** Example of a Tool Request Turn (Zoom):**\n"
     "<think>I observe a faint, dark spot on the main body of the component. It is unclear if this is a surface hole or a smudge. "
     "I need to zoom in to determine its nature and precise boundaries.</think>\n"
     "<tool_call>\n"
-    '[{"tool_name": "zoom_in", "parameters": {"bbox": [250, 300, 300, 350]}}]\n'
+    '[{"tool_name": "image_zoom_in_tool", "parameters": {"bbox_2d": [250, 300, 300, 350]}}]\n'
+    "</tool_call>\n"
+    "** Example of a Tool Request Turn (Reference):**\n"
+    "<think>I notice some texture variations on the surface. To determine if this is a defect or normal surface pattern, "
+    "I need to compare it with a defect-free reference image.</think>\n"
+    "<tool_call>\n"
+    '[{"tool_name": "image_reference_tool", "parameters": {"reason": "to compare surface texture patterns"}}]\n'
     "</tool_call>\n"
     "---\n"
     "### Format 2: Use When You Have Found a Defect\n"
@@ -212,9 +223,19 @@ class CustomRLHFDataset(RLHFDataset):
 
         # add index for each prompt
         index = row_dict.get("extra_info", {}).get("index", 0)
+        
+        # Get good reference image from extra_info if available
+        good_reference_image = row_dict.get("extra_info", {}).get("good_reference_image")
+        
         tools_kwargs = {
             "image_zoom_in_tool": {
                 "create_kwargs": {"image": images[0]},
+                # "execute_kwargs": {},
+                # "calc_reward_kwargs": {},
+                # "release_kwargs": {},
+            },
+            "image_reference_tool": {
+                "create_kwargs": {"good_reference_image": good_reference_image},
                 # "execute_kwargs": {},
                 # "calc_reward_kwargs": {},
                 # "release_kwargs": {},
