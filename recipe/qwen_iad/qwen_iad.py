@@ -399,6 +399,84 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
     return precision
 
 
+def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
+    """
+    Compute IoU between predicted bboxes and ground truth mask image.
+    
+    This function is called only when gt_mask_bytes is confirmed to be valid bytes data.
+    
+    Args:
+        pred_boxes: List of predicted bounding boxes in [x1, y1, x2, y2] format
+        gt_mask_bytes: Bytes data of ground truth mask image (must not be None)
+        max_pred_boxes: Maximum number of predicted boxes to consider
+        
+    Returns:
+        float: IoU score between 0 and 1
+    """
+    from io import BytesIO
+    import numpy as np
+    
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.error("PIL not available, cannot compute mask IoU")
+        return 0.0
+    
+    # Limit predicted boxes
+    if len(pred_boxes) > max_pred_boxes:
+        pred_boxes = pred_boxes[:max_pred_boxes]
+    
+    # Handle empty prediction case
+    if len(pred_boxes) == 0:
+        # No predictions but there's a ground truth mask = penalty for missing detection
+        logger.warning("No predicted boxes but ground truth mask exists")
+        return 0.0
+    
+    try:
+        # Load ground truth mask image
+        gt_mask_img = Image.open(BytesIO(gt_mask_bytes))
+        
+        # Convert to grayscale if needed
+        if gt_mask_img.mode != 'L':
+            gt_mask_img = gt_mask_img.convert('L')
+        
+        # Convert to numpy array and binarize
+        gt_mask = np.array(gt_mask_img)
+        gt_mask_binary = (gt_mask > 127).astype(np.uint8)
+        
+        # Get image dimensions
+        height, width = gt_mask_binary.shape
+        
+        # Create prediction mask from bboxes
+        pred_mask = np.zeros((height, width), dtype=np.uint8)
+        
+        for box in pred_boxes:
+            x1, y1, x2, y2 = box
+            # Convert to integer coordinates and clip to image bounds
+            x1 = int(max(0, min(width - 1, x1)))
+            y1 = int(max(0, min(height - 1, y1)))
+            x2 = int(max(0, min(width, x2)))
+            y2 = int(max(0, min(height, y2)))
+            
+            # Fill the bbox region in prediction mask
+            if x2 > x1 and y2 > y1:
+                pred_mask[y1:y2, x1:x2] = 1
+        
+        # Compute IoU between prediction mask and ground truth mask
+        intersection = np.logical_and(pred_mask, gt_mask_binary).sum()
+        union = np.logical_or(pred_mask, gt_mask_binary).sum()
+        
+        if union == 0:
+            return 1.0 if intersection == 0 else 0.0
+        
+        iou = float(intersection) / float(union)
+        return iou
+        
+    except Exception as e:
+        logger.error(f"Failed to compute mask IoU: {e}")
+        return 0.0
+
+
 def _extract_ground_truth_answer(ground_truth, extra_info):
     """Return the textual ground truth answer if available."""
     answer = None
@@ -620,7 +698,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     has_tool_usage = count_tool_call_1 > 0
     tool_usage_reward = 1.0 if has_tool_usage else 0.0
     
-    # Part 2: Compute bbox IoU from tool_call parameters
+    # Part 2: Compute bbox IoU from tool_call parameters or mask image
     bbox_iou = 0.0
     if has_tool_usage:
         # Extract bbox from the last tool_call only
@@ -643,13 +721,32 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 pass
         
         if pred_boxes:
-            # Get ground truth bboxes
-            gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
-            # Compute IoU-based reward
-            bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
+            # Check if mask image is available in extra_info (only exists for defective samples)
+            gt_mask_bytes = None
+            if extra_info and isinstance(extra_info, dict) and "mask_image" in extra_info:
+                gt_mask_bytes = extra_info.get("mask_image")
+            
+            # Determine which IoU calculation method to use
+            # Priority: mask-based IoU > bbox-based IoU
+            if gt_mask_bytes is not None and isinstance(gt_mask_bytes, bytes):
+                # Use mask-based IoU (more accurate for defective samples)
+                bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3)
+                logger.debug(f"Using mask-based IoU: {bbox_iou:.4f}")
+            else:
+                # Fallback to bbox-based IoU
+                # This handles two cases:
+                # 1. Good samples (label=0) without mask_image
+                # 2. Legacy data without mask_image field
+                
+                gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
+                bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
+                if gt_boxes:
+                    logger.debug(f"Using bbox-based IoU with {len(gt_boxes)} GT boxes: {bbox_iou:.4f}")
+                else:
+                    logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
     
     # Combined tool reward
-    tool_reward = tool_usage_reward + bbox_iou
+    tool_reward = 0.5 * tool_usage_reward + 0.5 * bbox_iou
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)

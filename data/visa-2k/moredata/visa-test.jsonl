@@ -1,0 +1,500 @@
+{"filename": "capsules/test/ko/000.JPG", "mask": "capsules/ground_truth/ko/000.png", "foreground": "capsules/foreground/test/ko/000.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/001.JPG", "mask": "capsules/ground_truth/ko/001.png", "foreground": "capsules/foreground/test/ko/001.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/002.JPG", "mask": "capsules/ground_truth/ko/002.png", "foreground": "capsules/foreground/test/ko/002.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/003.JPG", "mask": "capsules/ground_truth/ko/003.png", "foreground": "capsules/foreground/test/ko/003.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/004.JPG", "mask": "capsules/ground_truth/ko/004.png", "foreground": "capsules/foreground/test/ko/004.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/005.JPG", "mask": "capsules/ground_truth/ko/005.png", "foreground": "capsules/foreground/test/ko/005.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/006.JPG", "mask": "capsules/ground_truth/ko/006.png", "foreground": "capsules/foreground/test/ko/006.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/007.JPG", "mask": "capsules/ground_truth/ko/007.png", "foreground": "capsules/foreground/test/ko/007.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/008.JPG", "mask": "capsules/ground_truth/ko/008.png", "foreground": "capsules/foreground/test/ko/008.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/009.JPG", "mask": "capsules/ground_truth/ko/009.png", "foreground": "capsules/foreground/test/ko/009.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/010.JPG", "mask": "capsules/ground_truth/ko/010.png", "foreground": "capsules/foreground/test/ko/010.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/011.JPG", "mask": "capsules/ground_truth/ko/011.png", "foreground": "capsules/foreground/test/ko/011.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/012.JPG", "mask": "capsules/ground_truth/ko/012.png", "foreground": "capsules/foreground/test/ko/012.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/013.JPG", "mask": "capsules/ground_truth/ko/013.png", "foreground": "capsules/foreground/test/ko/013.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/014.JPG", "mask": "capsules/ground_truth/ko/014.png", "foreground": "capsules/foreground/test/ko/014.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/015.JPG", "mask": "capsules/ground_truth/ko/015.png", "foreground": "capsules/foreground/test/ko/015.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/016.JPG", "mask": "capsules/ground_truth/ko/016.png", "foreground": "capsules/foreground/test/ko/016.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/017.JPG", "mask": "capsules/ground_truth/ko/017.png", "foreground": "capsules/foreground/test/ko/017.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/018.JPG", "mask": "capsules/ground_truth/ko/018.png", "foreground": "capsules/foreground/test/ko/018.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/019.JPG", "mask": "capsules/ground_truth/ko/019.png", "foreground": "capsules/foreground/test/ko/019.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/020.JPG", "mask": "capsules/ground_truth/ko/020.png", "foreground": "capsules/foreground/test/ko/020.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/021.JPG", "mask": "capsules/ground_truth/ko/021.png", "foreground": "capsules/foreground/test/ko/021.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/022.JPG", "mask": "capsules/ground_truth/ko/022.png", "foreground": "capsules/foreground/test/ko/022.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/023.JPG", "mask": "capsules/ground_truth/ko/023.png", "foreground": "capsules/foreground/test/ko/023.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/024.JPG", "mask": "capsules/ground_truth/ko/024.png", "foreground": "capsules/foreground/test/ko/024.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/025.JPG", "mask": "capsules/ground_truth/ko/025.png", "foreground": "capsules/foreground/test/ko/025.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/026.JPG", "mask": "capsules/ground_truth/ko/026.png", "foreground": "capsules/foreground/test/ko/026.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/027.JPG", "mask": "capsules/ground_truth/ko/027.png", "foreground": "capsules/foreground/test/ko/027.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/028.JPG", "mask": "capsules/ground_truth/ko/028.png", "foreground": "capsules/foreground/test/ko/028.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/029.JPG", "mask": "capsules/ground_truth/ko/029.png", "foreground": "capsules/foreground/test/ko/029.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/030.JPG", "mask": "capsules/ground_truth/ko/030.png", "foreground": "capsules/foreground/test/ko/030.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/031.JPG", "mask": "capsules/ground_truth/ko/031.png", "foreground": "capsules/foreground/test/ko/031.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/032.JPG", "mask": "capsules/ground_truth/ko/032.png", "foreground": "capsules/foreground/test/ko/032.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/033.JPG", "mask": "capsules/ground_truth/ko/033.png", "foreground": "capsules/foreground/test/ko/033.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/034.JPG", "mask": "capsules/ground_truth/ko/034.png", "foreground": "capsules/foreground/test/ko/034.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/035.JPG", "mask": "capsules/ground_truth/ko/035.png", "foreground": "capsules/foreground/test/ko/035.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/036.JPG", "mask": "capsules/ground_truth/ko/036.png", "foreground": "capsules/foreground/test/ko/036.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/037.JPG", "mask": "capsules/ground_truth/ko/037.png", "foreground": "capsules/foreground/test/ko/037.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/038.JPG", "mask": "capsules/ground_truth/ko/038.png", "foreground": "capsules/foreground/test/ko/038.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/039.JPG", "mask": "capsules/ground_truth/ko/039.png", "foreground": "capsules/foreground/test/ko/039.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/040.JPG", "mask": "capsules/ground_truth/ko/040.png", "foreground": "capsules/foreground/test/ko/040.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/041.JPG", "mask": "capsules/ground_truth/ko/041.png", "foreground": "capsules/foreground/test/ko/041.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/042.JPG", "mask": "capsules/ground_truth/ko/042.png", "foreground": "capsules/foreground/test/ko/042.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/043.JPG", "mask": "capsules/ground_truth/ko/043.png", "foreground": "capsules/foreground/test/ko/043.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/044.JPG", "mask": "capsules/ground_truth/ko/044.png", "foreground": "capsules/foreground/test/ko/044.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/045.JPG", "mask": "capsules/ground_truth/ko/045.png", "foreground": "capsules/foreground/test/ko/045.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/046.JPG", "mask": "capsules/ground_truth/ko/046.png", "foreground": "capsules/foreground/test/ko/046.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/047.JPG", "mask": "capsules/ground_truth/ko/047.png", "foreground": "capsules/foreground/test/ko/047.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/048.JPG", "mask": "capsules/ground_truth/ko/048.png", "foreground": "capsules/foreground/test/ko/048.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ko/099.JPG", "mask": "capsules/ground_truth/ko/099.png", "foreground": "capsules/foreground/test/ko/099.JPG", "clsname": "capsules", "label": 1, "label_name": "ko"}
+{"filename": "capsules/test/ok/000.JPG", "foreground": "capsules/foreground/test/ok/000.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/001.JPG", "foreground": "capsules/foreground/test/ok/001.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/002.JPG", "foreground": "capsules/foreground/test/ok/002.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/003.JPG", "foreground": "capsules/foreground/test/ok/003.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/004.JPG", "foreground": "capsules/foreground/test/ok/004.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/005.JPG", "foreground": "capsules/foreground/test/ok/005.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/006.JPG", "foreground": "capsules/foreground/test/ok/006.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/007.JPG", "foreground": "capsules/foreground/test/ok/007.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/008.JPG", "foreground": "capsules/foreground/test/ok/008.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/009.JPG", "foreground": "capsules/foreground/test/ok/009.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/010.JPG", "foreground": "capsules/foreground/test/ok/010.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/011.JPG", "foreground": "capsules/foreground/test/ok/011.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/012.JPG", "foreground": "capsules/foreground/test/ok/012.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/013.JPG", "foreground": "capsules/foreground/test/ok/013.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/014.JPG", "foreground": "capsules/foreground/test/ok/014.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/015.JPG", "foreground": "capsules/foreground/test/ok/015.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/016.JPG", "foreground": "capsules/foreground/test/ok/016.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/017.JPG", "foreground": "capsules/foreground/test/ok/017.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/018.JPG", "foreground": "capsules/foreground/test/ok/018.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/019.JPG", "foreground": "capsules/foreground/test/ok/019.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/020.JPG", "foreground": "capsules/foreground/test/ok/020.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/021.JPG", "foreground": "capsules/foreground/test/ok/021.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/022.JPG", "foreground": "capsules/foreground/test/ok/022.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/023.JPG", "foreground": "capsules/foreground/test/ok/023.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/024.JPG", "foreground": "capsules/foreground/test/ok/024.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/025.JPG", "foreground": "capsules/foreground/test/ok/025.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/026.JPG", "foreground": "capsules/foreground/test/ok/026.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/027.JPG", "foreground": "capsules/foreground/test/ok/027.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/028.JPG", "foreground": "capsules/foreground/test/ok/028.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/029.JPG", "foreground": "capsules/foreground/test/ok/029.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/030.JPG", "foreground": "capsules/foreground/test/ok/030.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/031.JPG", "foreground": "capsules/foreground/test/ok/031.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/032.JPG", "foreground": "capsules/foreground/test/ok/032.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/033.JPG", "foreground": "capsules/foreground/test/ok/033.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/034.JPG", "foreground": "capsules/foreground/test/ok/034.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/035.JPG", "foreground": "capsules/foreground/test/ok/035.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/036.JPG", "foreground": "capsules/foreground/test/ok/036.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/037.JPG", "foreground": "capsules/foreground/test/ok/037.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/038.JPG", "foreground": "capsules/foreground/test/ok/038.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/039.JPG", "foreground": "capsules/foreground/test/ok/039.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/040.JPG", "foreground": "capsules/foreground/test/ok/040.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/041.JPG", "foreground": "capsules/foreground/test/ok/041.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/042.JPG", "foreground": "capsules/foreground/test/ok/042.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/043.JPG", "foreground": "capsules/foreground/test/ok/043.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/044.JPG", "foreground": "capsules/foreground/test/ok/044.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/045.JPG", "foreground": "capsules/foreground/test/ok/045.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/046.JPG", "foreground": "capsules/foreground/test/ok/046.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/047.JPG", "foreground": "capsules/foreground/test/ok/047.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "capsules/test/ok/048.JPG", "foreground": "capsules/foreground/test/ok/048.JPG", "clsname": "capsules", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ko/000.JPG", "mask": "macaroni1/ground_truth/ko/000.png", "foreground": "macaroni1/foreground/test/ko/000.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/001.JPG", "mask": "macaroni1/ground_truth/ko/001.png", "foreground": "macaroni1/foreground/test/ko/001.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/002.JPG", "mask": "macaroni1/ground_truth/ko/002.png", "foreground": "macaroni1/foreground/test/ko/002.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/003.JPG", "mask": "macaroni1/ground_truth/ko/003.png", "foreground": "macaroni1/foreground/test/ko/003.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/004.JPG", "mask": "macaroni1/ground_truth/ko/004.png", "foreground": "macaroni1/foreground/test/ko/004.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/005.JPG", "mask": "macaroni1/ground_truth/ko/005.png", "foreground": "macaroni1/foreground/test/ko/005.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/006.JPG", "mask": "macaroni1/ground_truth/ko/006.png", "foreground": "macaroni1/foreground/test/ko/006.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/007.JPG", "mask": "macaroni1/ground_truth/ko/007.png", "foreground": "macaroni1/foreground/test/ko/007.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/008.JPG", "mask": "macaroni1/ground_truth/ko/008.png", "foreground": "macaroni1/foreground/test/ko/008.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/009.JPG", "mask": "macaroni1/ground_truth/ko/009.png", "foreground": "macaroni1/foreground/test/ko/009.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/010.JPG", "mask": "macaroni1/ground_truth/ko/010.png", "foreground": "macaroni1/foreground/test/ko/010.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/011.JPG", "mask": "macaroni1/ground_truth/ko/011.png", "foreground": "macaroni1/foreground/test/ko/011.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/012.JPG", "mask": "macaroni1/ground_truth/ko/012.png", "foreground": "macaroni1/foreground/test/ko/012.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/013.JPG", "mask": "macaroni1/ground_truth/ko/013.png", "foreground": "macaroni1/foreground/test/ko/013.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/014.JPG", "mask": "macaroni1/ground_truth/ko/014.png", "foreground": "macaroni1/foreground/test/ko/014.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/015.JPG", "mask": "macaroni1/ground_truth/ko/015.png", "foreground": "macaroni1/foreground/test/ko/015.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/016.JPG", "mask": "macaroni1/ground_truth/ko/016.png", "foreground": "macaroni1/foreground/test/ko/016.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/017.JPG", "mask": "macaroni1/ground_truth/ko/017.png", "foreground": "macaroni1/foreground/test/ko/017.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/018.JPG", "mask": "macaroni1/ground_truth/ko/018.png", "foreground": "macaroni1/foreground/test/ko/018.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/019.JPG", "mask": "macaroni1/ground_truth/ko/019.png", "foreground": "macaroni1/foreground/test/ko/019.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/020.JPG", "mask": "macaroni1/ground_truth/ko/020.png", "foreground": "macaroni1/foreground/test/ko/020.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/021.JPG", "mask": "macaroni1/ground_truth/ko/021.png", "foreground": "macaroni1/foreground/test/ko/021.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/022.JPG", "mask": "macaroni1/ground_truth/ko/022.png", "foreground": "macaroni1/foreground/test/ko/022.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/023.JPG", "mask": "macaroni1/ground_truth/ko/023.png", "foreground": "macaroni1/foreground/test/ko/023.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/024.JPG", "mask": "macaroni1/ground_truth/ko/024.png", "foreground": "macaroni1/foreground/test/ko/024.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/025.JPG", "mask": "macaroni1/ground_truth/ko/025.png", "foreground": "macaroni1/foreground/test/ko/025.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/026.JPG", "mask": "macaroni1/ground_truth/ko/026.png", "foreground": "macaroni1/foreground/test/ko/026.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/027.JPG", "mask": "macaroni1/ground_truth/ko/027.png", "foreground": "macaroni1/foreground/test/ko/027.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/028.JPG", "mask": "macaroni1/ground_truth/ko/028.png", "foreground": "macaroni1/foreground/test/ko/028.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/029.JPG", "mask": "macaroni1/ground_truth/ko/029.png", "foreground": "macaroni1/foreground/test/ko/029.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/030.JPG", "mask": "macaroni1/ground_truth/ko/030.png", "foreground": "macaroni1/foreground/test/ko/030.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/031.JPG", "mask": "macaroni1/ground_truth/ko/031.png", "foreground": "macaroni1/foreground/test/ko/031.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/032.JPG", "mask": "macaroni1/ground_truth/ko/032.png", "foreground": "macaroni1/foreground/test/ko/032.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/033.JPG", "mask": "macaroni1/ground_truth/ko/033.png", "foreground": "macaroni1/foreground/test/ko/033.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/034.JPG", "mask": "macaroni1/ground_truth/ko/034.png", "foreground": "macaroni1/foreground/test/ko/034.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/035.JPG", "mask": "macaroni1/ground_truth/ko/035.png", "foreground": "macaroni1/foreground/test/ko/035.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/036.JPG", "mask": "macaroni1/ground_truth/ko/036.png", "foreground": "macaroni1/foreground/test/ko/036.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/037.JPG", "mask": "macaroni1/ground_truth/ko/037.png", "foreground": "macaroni1/foreground/test/ko/037.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/038.JPG", "mask": "macaroni1/ground_truth/ko/038.png", "foreground": "macaroni1/foreground/test/ko/038.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/039.JPG", "mask": "macaroni1/ground_truth/ko/039.png", "foreground": "macaroni1/foreground/test/ko/039.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/040.JPG", "mask": "macaroni1/ground_truth/ko/040.png", "foreground": "macaroni1/foreground/test/ko/040.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/041.JPG", "mask": "macaroni1/ground_truth/ko/041.png", "foreground": "macaroni1/foreground/test/ko/041.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/042.JPG", "mask": "macaroni1/ground_truth/ko/042.png", "foreground": "macaroni1/foreground/test/ko/042.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/043.JPG", "mask": "macaroni1/ground_truth/ko/043.png", "foreground": "macaroni1/foreground/test/ko/043.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/044.JPG", "mask": "macaroni1/ground_truth/ko/044.png", "foreground": "macaroni1/foreground/test/ko/044.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/045.JPG", "mask": "macaroni1/ground_truth/ko/045.png", "foreground": "macaroni1/foreground/test/ko/045.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/046.JPG", "mask": "macaroni1/ground_truth/ko/046.png", "foreground": "macaroni1/foreground/test/ko/046.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/047.JPG", "mask": "macaroni1/ground_truth/ko/047.png", "foreground": "macaroni1/foreground/test/ko/047.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/048.JPG", "mask": "macaroni1/ground_truth/ko/048.png", "foreground": "macaroni1/foreground/test/ko/048.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ko/049.JPG", "mask": "macaroni1/ground_truth/ko/049.png", "foreground": "macaroni1/foreground/test/ko/049.JPG", "clsname": "macaroni1", "label": 1, "label_name": "ko"}
+{"filename": "macaroni1/test/ok/000.JPG", "foreground": "macaroni1/foreground/test/ok/000.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/001.JPG", "foreground": "macaroni1/foreground/test/ok/001.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/002.JPG", "foreground": "macaroni1/foreground/test/ok/002.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/003.JPG", "foreground": "macaroni1/foreground/test/ok/003.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/004.JPG", "foreground": "macaroni1/foreground/test/ok/004.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/005.JPG", "foreground": "macaroni1/foreground/test/ok/005.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/006.JPG", "foreground": "macaroni1/foreground/test/ok/006.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/007.JPG", "foreground": "macaroni1/foreground/test/ok/007.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/008.JPG", "foreground": "macaroni1/foreground/test/ok/008.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/009.JPG", "foreground": "macaroni1/foreground/test/ok/009.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/010.JPG", "foreground": "macaroni1/foreground/test/ok/010.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/011.JPG", "foreground": "macaroni1/foreground/test/ok/011.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/012.JPG", "foreground": "macaroni1/foreground/test/ok/012.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/013.JPG", "foreground": "macaroni1/foreground/test/ok/013.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/014.JPG", "foreground": "macaroni1/foreground/test/ok/014.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/015.JPG", "foreground": "macaroni1/foreground/test/ok/015.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/016.JPG", "foreground": "macaroni1/foreground/test/ok/016.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/017.JPG", "foreground": "macaroni1/foreground/test/ok/017.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/018.JPG", "foreground": "macaroni1/foreground/test/ok/018.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/019.JPG", "foreground": "macaroni1/foreground/test/ok/019.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/020.JPG", "foreground": "macaroni1/foreground/test/ok/020.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/021.JPG", "foreground": "macaroni1/foreground/test/ok/021.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/022.JPG", "foreground": "macaroni1/foreground/test/ok/022.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/023.JPG", "foreground": "macaroni1/foreground/test/ok/023.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/024.JPG", "foreground": "macaroni1/foreground/test/ok/024.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/025.JPG", "foreground": "macaroni1/foreground/test/ok/025.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/026.JPG", "foreground": "macaroni1/foreground/test/ok/026.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/027.JPG", "foreground": "macaroni1/foreground/test/ok/027.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/028.JPG", "foreground": "macaroni1/foreground/test/ok/028.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/029.JPG", "foreground": "macaroni1/foreground/test/ok/029.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/030.JPG", "foreground": "macaroni1/foreground/test/ok/030.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/031.JPG", "foreground": "macaroni1/foreground/test/ok/031.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/032.JPG", "foreground": "macaroni1/foreground/test/ok/032.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/033.JPG", "foreground": "macaroni1/foreground/test/ok/033.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/034.JPG", "foreground": "macaroni1/foreground/test/ok/034.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/035.JPG", "foreground": "macaroni1/foreground/test/ok/035.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/036.JPG", "foreground": "macaroni1/foreground/test/ok/036.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/037.JPG", "foreground": "macaroni1/foreground/test/ok/037.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/038.JPG", "foreground": "macaroni1/foreground/test/ok/038.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/039.JPG", "foreground": "macaroni1/foreground/test/ok/039.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/040.JPG", "foreground": "macaroni1/foreground/test/ok/040.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/041.JPG", "foreground": "macaroni1/foreground/test/ok/041.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/042.JPG", "foreground": "macaroni1/foreground/test/ok/042.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/043.JPG", "foreground": "macaroni1/foreground/test/ok/043.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/044.JPG", "foreground": "macaroni1/foreground/test/ok/044.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/045.JPG", "foreground": "macaroni1/foreground/test/ok/045.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/046.JPG", "foreground": "macaroni1/foreground/test/ok/046.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/047.JPG", "foreground": "macaroni1/foreground/test/ok/047.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/048.JPG", "foreground": "macaroni1/foreground/test/ok/048.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "macaroni1/test/ok/049.JPG", "foreground": "macaroni1/foreground/test/ok/049.JPG", "clsname": "macaroni1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ko/000.JPG", "mask": "pcb1/ground_truth/ko/000.png", "foreground": "pcb1/foreground/test/ko/000.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/001.JPG", "mask": "pcb1/ground_truth/ko/001.png", "foreground": "pcb1/foreground/test/ko/001.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/002.JPG", "mask": "pcb1/ground_truth/ko/002.png", "foreground": "pcb1/foreground/test/ko/002.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/003.JPG", "mask": "pcb1/ground_truth/ko/003.png", "foreground": "pcb1/foreground/test/ko/003.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/004.JPG", "mask": "pcb1/ground_truth/ko/004.png", "foreground": "pcb1/foreground/test/ko/004.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/005.JPG", "mask": "pcb1/ground_truth/ko/005.png", "foreground": "pcb1/foreground/test/ko/005.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/006.JPG", "mask": "pcb1/ground_truth/ko/006.png", "foreground": "pcb1/foreground/test/ko/006.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/007.JPG", "mask": "pcb1/ground_truth/ko/007.png", "foreground": "pcb1/foreground/test/ko/007.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/008.JPG", "mask": "pcb1/ground_truth/ko/008.png", "foreground": "pcb1/foreground/test/ko/008.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/009.JPG", "mask": "pcb1/ground_truth/ko/009.png", "foreground": "pcb1/foreground/test/ko/009.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/010.JPG", "mask": "pcb1/ground_truth/ko/010.png", "foreground": "pcb1/foreground/test/ko/010.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/011.JPG", "mask": "pcb1/ground_truth/ko/011.png", "foreground": "pcb1/foreground/test/ko/011.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/012.JPG", "mask": "pcb1/ground_truth/ko/012.png", "foreground": "pcb1/foreground/test/ko/012.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/013.JPG", "mask": "pcb1/ground_truth/ko/013.png", "foreground": "pcb1/foreground/test/ko/013.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/014.JPG", "mask": "pcb1/ground_truth/ko/014.png", "foreground": "pcb1/foreground/test/ko/014.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/015.JPG", "mask": "pcb1/ground_truth/ko/015.png", "foreground": "pcb1/foreground/test/ko/015.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/016.JPG", "mask": "pcb1/ground_truth/ko/016.png", "foreground": "pcb1/foreground/test/ko/016.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/017.JPG", "mask": "pcb1/ground_truth/ko/017.png", "foreground": "pcb1/foreground/test/ko/017.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/018.JPG", "mask": "pcb1/ground_truth/ko/018.png", "foreground": "pcb1/foreground/test/ko/018.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/019.JPG", "mask": "pcb1/ground_truth/ko/019.png", "foreground": "pcb1/foreground/test/ko/019.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/020.JPG", "mask": "pcb1/ground_truth/ko/020.png", "foreground": "pcb1/foreground/test/ko/020.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/021.JPG", "mask": "pcb1/ground_truth/ko/021.png", "foreground": "pcb1/foreground/test/ko/021.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/022.JPG", "mask": "pcb1/ground_truth/ko/022.png", "foreground": "pcb1/foreground/test/ko/022.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/023.JPG", "mask": "pcb1/ground_truth/ko/023.png", "foreground": "pcb1/foreground/test/ko/023.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/024.JPG", "mask": "pcb1/ground_truth/ko/024.png", "foreground": "pcb1/foreground/test/ko/024.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/025.JPG", "mask": "pcb1/ground_truth/ko/025.png", "foreground": "pcb1/foreground/test/ko/025.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/026.JPG", "mask": "pcb1/ground_truth/ko/026.png", "foreground": "pcb1/foreground/test/ko/026.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/027.JPG", "mask": "pcb1/ground_truth/ko/027.png", "foreground": "pcb1/foreground/test/ko/027.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/028.JPG", "mask": "pcb1/ground_truth/ko/028.png", "foreground": "pcb1/foreground/test/ko/028.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/029.JPG", "mask": "pcb1/ground_truth/ko/029.png", "foreground": "pcb1/foreground/test/ko/029.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/030.JPG", "mask": "pcb1/ground_truth/ko/030.png", "foreground": "pcb1/foreground/test/ko/030.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/031.JPG", "mask": "pcb1/ground_truth/ko/031.png", "foreground": "pcb1/foreground/test/ko/031.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/032.JPG", "mask": "pcb1/ground_truth/ko/032.png", "foreground": "pcb1/foreground/test/ko/032.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/033.JPG", "mask": "pcb1/ground_truth/ko/033.png", "foreground": "pcb1/foreground/test/ko/033.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/034.JPG", "mask": "pcb1/ground_truth/ko/034.png", "foreground": "pcb1/foreground/test/ko/034.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/035.JPG", "mask": "pcb1/ground_truth/ko/035.png", "foreground": "pcb1/foreground/test/ko/035.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/036.JPG", "mask": "pcb1/ground_truth/ko/036.png", "foreground": "pcb1/foreground/test/ko/036.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/037.JPG", "mask": "pcb1/ground_truth/ko/037.png", "foreground": "pcb1/foreground/test/ko/037.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/038.JPG", "mask": "pcb1/ground_truth/ko/038.png", "foreground": "pcb1/foreground/test/ko/038.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/039.JPG", "mask": "pcb1/ground_truth/ko/039.png", "foreground": "pcb1/foreground/test/ko/039.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/040.JPG", "mask": "pcb1/ground_truth/ko/040.png", "foreground": "pcb1/foreground/test/ko/040.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/041.JPG", "mask": "pcb1/ground_truth/ko/041.png", "foreground": "pcb1/foreground/test/ko/041.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/042.JPG", "mask": "pcb1/ground_truth/ko/042.png", "foreground": "pcb1/foreground/test/ko/042.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/043.JPG", "mask": "pcb1/ground_truth/ko/043.png", "foreground": "pcb1/foreground/test/ko/043.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/044.JPG", "mask": "pcb1/ground_truth/ko/044.png", "foreground": "pcb1/foreground/test/ko/044.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/045.JPG", "mask": "pcb1/ground_truth/ko/045.png", "foreground": "pcb1/foreground/test/ko/045.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/046.JPG", "mask": "pcb1/ground_truth/ko/046.png", "foreground": "pcb1/foreground/test/ko/046.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/047.JPG", "mask": "pcb1/ground_truth/ko/047.png", "foreground": "pcb1/foreground/test/ko/047.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/048.JPG", "mask": "pcb1/ground_truth/ko/048.png", "foreground": "pcb1/foreground/test/ko/048.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ko/049.JPG", "mask": "pcb1/ground_truth/ko/049.png", "foreground": "pcb1/foreground/test/ko/049.JPG", "clsname": "pcb1", "label": 1, "label_name": "ko"}
+{"filename": "pcb1/test/ok/000.JPG", "foreground": "pcb1/foreground/test/ok/000.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/001.JPG", "foreground": "pcb1/foreground/test/ok/001.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/002.JPG", "foreground": "pcb1/foreground/test/ok/002.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/003.JPG", "foreground": "pcb1/foreground/test/ok/003.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/004.JPG", "foreground": "pcb1/foreground/test/ok/004.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/005.JPG", "foreground": "pcb1/foreground/test/ok/005.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/006.JPG", "foreground": "pcb1/foreground/test/ok/006.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/007.JPG", "foreground": "pcb1/foreground/test/ok/007.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/008.JPG", "foreground": "pcb1/foreground/test/ok/008.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/009.JPG", "foreground": "pcb1/foreground/test/ok/009.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/010.JPG", "foreground": "pcb1/foreground/test/ok/010.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/011.JPG", "foreground": "pcb1/foreground/test/ok/011.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/012.JPG", "foreground": "pcb1/foreground/test/ok/012.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/013.JPG", "foreground": "pcb1/foreground/test/ok/013.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/014.JPG", "foreground": "pcb1/foreground/test/ok/014.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/015.JPG", "foreground": "pcb1/foreground/test/ok/015.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/016.JPG", "foreground": "pcb1/foreground/test/ok/016.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/017.JPG", "foreground": "pcb1/foreground/test/ok/017.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/018.JPG", "foreground": "pcb1/foreground/test/ok/018.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/019.JPG", "foreground": "pcb1/foreground/test/ok/019.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/020.JPG", "foreground": "pcb1/foreground/test/ok/020.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/021.JPG", "foreground": "pcb1/foreground/test/ok/021.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/022.JPG", "foreground": "pcb1/foreground/test/ok/022.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/023.JPG", "foreground": "pcb1/foreground/test/ok/023.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/024.JPG", "foreground": "pcb1/foreground/test/ok/024.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/025.JPG", "foreground": "pcb1/foreground/test/ok/025.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/026.JPG", "foreground": "pcb1/foreground/test/ok/026.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/027.JPG", "foreground": "pcb1/foreground/test/ok/027.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/028.JPG", "foreground": "pcb1/foreground/test/ok/028.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/029.JPG", "foreground": "pcb1/foreground/test/ok/029.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/030.JPG", "foreground": "pcb1/foreground/test/ok/030.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/031.JPG", "foreground": "pcb1/foreground/test/ok/031.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/032.JPG", "foreground": "pcb1/foreground/test/ok/032.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/033.JPG", "foreground": "pcb1/foreground/test/ok/033.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/034.JPG", "foreground": "pcb1/foreground/test/ok/034.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/035.JPG", "foreground": "pcb1/foreground/test/ok/035.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/036.JPG", "foreground": "pcb1/foreground/test/ok/036.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/037.JPG", "foreground": "pcb1/foreground/test/ok/037.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/038.JPG", "foreground": "pcb1/foreground/test/ok/038.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/039.JPG", "foreground": "pcb1/foreground/test/ok/039.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/040.JPG", "foreground": "pcb1/foreground/test/ok/040.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/041.JPG", "foreground": "pcb1/foreground/test/ok/041.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/042.JPG", "foreground": "pcb1/foreground/test/ok/042.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/043.JPG", "foreground": "pcb1/foreground/test/ok/043.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/044.JPG", "foreground": "pcb1/foreground/test/ok/044.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/045.JPG", "foreground": "pcb1/foreground/test/ok/045.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/046.JPG", "foreground": "pcb1/foreground/test/ok/046.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/047.JPG", "foreground": "pcb1/foreground/test/ok/047.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/048.JPG", "foreground": "pcb1/foreground/test/ok/048.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/049.JPG", "foreground": "pcb1/foreground/test/ok/049.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pcb1/test/ok/050.JPG", "foreground": "pcb1/foreground/test/ok/050.JPG", "clsname": "pcb1", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ko/000.JPG", "mask": "pipe_fryum/ground_truth/ko/000.png", "foreground": "pipe_fryum/foreground/test/ko/000.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/001.JPG", "mask": "pipe_fryum/ground_truth/ko/001.png", "foreground": "pipe_fryum/foreground/test/ko/001.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/002.JPG", "mask": "pipe_fryum/ground_truth/ko/002.png", "foreground": "pipe_fryum/foreground/test/ko/002.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/003.JPG", "mask": "pipe_fryum/ground_truth/ko/003.png", "foreground": "pipe_fryum/foreground/test/ko/003.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/004.JPG", "mask": "pipe_fryum/ground_truth/ko/004.png", "foreground": "pipe_fryum/foreground/test/ko/004.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/005.JPG", "mask": "pipe_fryum/ground_truth/ko/005.png", "foreground": "pipe_fryum/foreground/test/ko/005.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/006.JPG", "mask": "pipe_fryum/ground_truth/ko/006.png", "foreground": "pipe_fryum/foreground/test/ko/006.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/007.JPG", "mask": "pipe_fryum/ground_truth/ko/007.png", "foreground": "pipe_fryum/foreground/test/ko/007.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/008.JPG", "mask": "pipe_fryum/ground_truth/ko/008.png", "foreground": "pipe_fryum/foreground/test/ko/008.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/009.JPG", "mask": "pipe_fryum/ground_truth/ko/009.png", "foreground": "pipe_fryum/foreground/test/ko/009.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/010.JPG", "mask": "pipe_fryum/ground_truth/ko/010.png", "foreground": "pipe_fryum/foreground/test/ko/010.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/011.JPG", "mask": "pipe_fryum/ground_truth/ko/011.png", "foreground": "pipe_fryum/foreground/test/ko/011.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/012.JPG", "mask": "pipe_fryum/ground_truth/ko/012.png", "foreground": "pipe_fryum/foreground/test/ko/012.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/013.JPG", "mask": "pipe_fryum/ground_truth/ko/013.png", "foreground": "pipe_fryum/foreground/test/ko/013.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/014.JPG", "mask": "pipe_fryum/ground_truth/ko/014.png", "foreground": "pipe_fryum/foreground/test/ko/014.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/015.JPG", "mask": "pipe_fryum/ground_truth/ko/015.png", "foreground": "pipe_fryum/foreground/test/ko/015.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/016.JPG", "mask": "pipe_fryum/ground_truth/ko/016.png", "foreground": "pipe_fryum/foreground/test/ko/016.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/017.JPG", "mask": "pipe_fryum/ground_truth/ko/017.png", "foreground": "pipe_fryum/foreground/test/ko/017.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/018.JPG", "mask": "pipe_fryum/ground_truth/ko/018.png", "foreground": "pipe_fryum/foreground/test/ko/018.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/019.JPG", "mask": "pipe_fryum/ground_truth/ko/019.png", "foreground": "pipe_fryum/foreground/test/ko/019.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/020.JPG", "mask": "pipe_fryum/ground_truth/ko/020.png", "foreground": "pipe_fryum/foreground/test/ko/020.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/021.JPG", "mask": "pipe_fryum/ground_truth/ko/021.png", "foreground": "pipe_fryum/foreground/test/ko/021.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/022.JPG", "mask": "pipe_fryum/ground_truth/ko/022.png", "foreground": "pipe_fryum/foreground/test/ko/022.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/023.JPG", "mask": "pipe_fryum/ground_truth/ko/023.png", "foreground": "pipe_fryum/foreground/test/ko/023.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/024.JPG", "mask": "pipe_fryum/ground_truth/ko/024.png", "foreground": "pipe_fryum/foreground/test/ko/024.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/025.JPG", "mask": "pipe_fryum/ground_truth/ko/025.png", "foreground": "pipe_fryum/foreground/test/ko/025.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/026.JPG", "mask": "pipe_fryum/ground_truth/ko/026.png", "foreground": "pipe_fryum/foreground/test/ko/026.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/027.JPG", "mask": "pipe_fryum/ground_truth/ko/027.png", "foreground": "pipe_fryum/foreground/test/ko/027.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/028.JPG", "mask": "pipe_fryum/ground_truth/ko/028.png", "foreground": "pipe_fryum/foreground/test/ko/028.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/029.JPG", "mask": "pipe_fryum/ground_truth/ko/029.png", "foreground": "pipe_fryum/foreground/test/ko/029.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/030.JPG", "mask": "pipe_fryum/ground_truth/ko/030.png", "foreground": "pipe_fryum/foreground/test/ko/030.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/031.JPG", "mask": "pipe_fryum/ground_truth/ko/031.png", "foreground": "pipe_fryum/foreground/test/ko/031.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/032.JPG", "mask": "pipe_fryum/ground_truth/ko/032.png", "foreground": "pipe_fryum/foreground/test/ko/032.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/033.JPG", "mask": "pipe_fryum/ground_truth/ko/033.png", "foreground": "pipe_fryum/foreground/test/ko/033.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/034.JPG", "mask": "pipe_fryum/ground_truth/ko/034.png", "foreground": "pipe_fryum/foreground/test/ko/034.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/035.JPG", "mask": "pipe_fryum/ground_truth/ko/035.png", "foreground": "pipe_fryum/foreground/test/ko/035.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/036.JPG", "mask": "pipe_fryum/ground_truth/ko/036.png", "foreground": "pipe_fryum/foreground/test/ko/036.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/037.JPG", "mask": "pipe_fryum/ground_truth/ko/037.png", "foreground": "pipe_fryum/foreground/test/ko/037.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/038.JPG", "mask": "pipe_fryum/ground_truth/ko/038.png", "foreground": "pipe_fryum/foreground/test/ko/038.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/039.JPG", "mask": "pipe_fryum/ground_truth/ko/039.png", "foreground": "pipe_fryum/foreground/test/ko/039.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/040.JPG", "mask": "pipe_fryum/ground_truth/ko/040.png", "foreground": "pipe_fryum/foreground/test/ko/040.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/041.JPG", "mask": "pipe_fryum/ground_truth/ko/041.png", "foreground": "pipe_fryum/foreground/test/ko/041.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/042.JPG", "mask": "pipe_fryum/ground_truth/ko/042.png", "foreground": "pipe_fryum/foreground/test/ko/042.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/043.JPG", "mask": "pipe_fryum/ground_truth/ko/043.png", "foreground": "pipe_fryum/foreground/test/ko/043.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/044.JPG", "mask": "pipe_fryum/ground_truth/ko/044.png", "foreground": "pipe_fryum/foreground/test/ko/044.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/045.JPG", "mask": "pipe_fryum/ground_truth/ko/045.png", "foreground": "pipe_fryum/foreground/test/ko/045.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/046.JPG", "mask": "pipe_fryum/ground_truth/ko/046.png", "foreground": "pipe_fryum/foreground/test/ko/046.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/047.JPG", "mask": "pipe_fryum/ground_truth/ko/047.png", "foreground": "pipe_fryum/foreground/test/ko/047.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/048.JPG", "mask": "pipe_fryum/ground_truth/ko/048.png", "foreground": "pipe_fryum/foreground/test/ko/048.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/049.JPG", "mask": "pipe_fryum/ground_truth/ko/049.png", "foreground": "pipe_fryum/foreground/test/ko/049.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/050.JPG", "mask": "pipe_fryum/ground_truth/ko/050.png", "foreground": "pipe_fryum/foreground/test/ko/050.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/051.JPG", "mask": "pipe_fryum/ground_truth/ko/051.png", "foreground": "pipe_fryum/foreground/test/ko/051.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/052.JPG", "mask": "pipe_fryum/ground_truth/ko/052.png", "foreground": "pipe_fryum/foreground/test/ko/052.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/053.JPG", "mask": "pipe_fryum/ground_truth/ko/053.png", "foreground": "pipe_fryum/foreground/test/ko/053.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/054.JPG", "mask": "pipe_fryum/ground_truth/ko/054.png", "foreground": "pipe_fryum/foreground/test/ko/054.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/055.JPG", "mask": "pipe_fryum/ground_truth/ko/055.png", "foreground": "pipe_fryum/foreground/test/ko/055.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ko/056.JPG", "mask": "pipe_fryum/ground_truth/ko/056.png", "foreground": "pipe_fryum/foreground/test/ko/056.JPG", "clsname": "pipe_fryum", "label": 1, "label_name": "ko"}
+{"filename": "pipe_fryum/test/ok/000.JPG", "foreground": "pipe_fryum/foreground/test/ok/000.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/001.JPG", "foreground": "pipe_fryum/foreground/test/ok/001.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/002.JPG", "foreground": "pipe_fryum/foreground/test/ok/002.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/003.JPG", "foreground": "pipe_fryum/foreground/test/ok/003.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/004.JPG", "foreground": "pipe_fryum/foreground/test/ok/004.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/005.JPG", "foreground": "pipe_fryum/foreground/test/ok/005.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/006.JPG", "foreground": "pipe_fryum/foreground/test/ok/006.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/007.JPG", "foreground": "pipe_fryum/foreground/test/ok/007.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/008.JPG", "foreground": "pipe_fryum/foreground/test/ok/008.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/009.JPG", "foreground": "pipe_fryum/foreground/test/ok/009.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/010.JPG", "foreground": "pipe_fryum/foreground/test/ok/010.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/011.JPG", "foreground": "pipe_fryum/foreground/test/ok/011.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/012.JPG", "foreground": "pipe_fryum/foreground/test/ok/012.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/013.JPG", "foreground": "pipe_fryum/foreground/test/ok/013.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/014.JPG", "foreground": "pipe_fryum/foreground/test/ok/014.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/015.JPG", "foreground": "pipe_fryum/foreground/test/ok/015.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/016.JPG", "foreground": "pipe_fryum/foreground/test/ok/016.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/017.JPG", "foreground": "pipe_fryum/foreground/test/ok/017.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/018.JPG", "foreground": "pipe_fryum/foreground/test/ok/018.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/019.JPG", "foreground": "pipe_fryum/foreground/test/ok/019.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/020.JPG", "foreground": "pipe_fryum/foreground/test/ok/020.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/021.JPG", "foreground": "pipe_fryum/foreground/test/ok/021.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/022.JPG", "foreground": "pipe_fryum/foreground/test/ok/022.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/023.JPG", "foreground": "pipe_fryum/foreground/test/ok/023.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/024.JPG", "foreground": "pipe_fryum/foreground/test/ok/024.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/025.JPG", "foreground": "pipe_fryum/foreground/test/ok/025.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/026.JPG", "foreground": "pipe_fryum/foreground/test/ok/026.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/027.JPG", "foreground": "pipe_fryum/foreground/test/ok/027.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/028.JPG", "foreground": "pipe_fryum/foreground/test/ok/028.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/029.JPG", "foreground": "pipe_fryum/foreground/test/ok/029.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/030.JPG", "foreground": "pipe_fryum/foreground/test/ok/030.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/031.JPG", "foreground": "pipe_fryum/foreground/test/ok/031.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/032.JPG", "foreground": "pipe_fryum/foreground/test/ok/032.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/033.JPG", "foreground": "pipe_fryum/foreground/test/ok/033.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/034.JPG", "foreground": "pipe_fryum/foreground/test/ok/034.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/035.JPG", "foreground": "pipe_fryum/foreground/test/ok/035.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/036.JPG", "foreground": "pipe_fryum/foreground/test/ok/036.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/037.JPG", "foreground": "pipe_fryum/foreground/test/ok/037.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/038.JPG", "foreground": "pipe_fryum/foreground/test/ok/038.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/039.JPG", "foreground": "pipe_fryum/foreground/test/ok/039.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/040.JPG", "foreground": "pipe_fryum/foreground/test/ok/040.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "pipe_fryum/test/ok/041.JPG", "foreground": "pipe_fryum/foreground/test/ok/041.JPG", "clsname": "pipe_fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ko/000.JPG", "mask": "fryum/ground_truth/ko/000.png", "foreground": "fryum/foreground/test/ko/000.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/001.JPG", "mask": "fryum/ground_truth/ko/001.png", "foreground": "fryum/foreground/test/ko/001.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/002.JPG", "mask": "fryum/ground_truth/ko/002.png", "foreground": "fryum/foreground/test/ko/002.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/003.JPG", "mask": "fryum/ground_truth/ko/003.png", "foreground": "fryum/foreground/test/ko/003.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/004.JPG", "mask": "fryum/ground_truth/ko/004.png", "foreground": "fryum/foreground/test/ko/004.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/005.JPG", "mask": "fryum/ground_truth/ko/005.png", "foreground": "fryum/foreground/test/ko/005.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/006.JPG", "mask": "fryum/ground_truth/ko/006.png", "foreground": "fryum/foreground/test/ko/006.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/007.JPG", "mask": "fryum/ground_truth/ko/007.png", "foreground": "fryum/foreground/test/ko/007.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/008.JPG", "mask": "fryum/ground_truth/ko/008.png", "foreground": "fryum/foreground/test/ko/008.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/009.JPG", "mask": "fryum/ground_truth/ko/009.png", "foreground": "fryum/foreground/test/ko/009.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/010.JPG", "mask": "fryum/ground_truth/ko/010.png", "foreground": "fryum/foreground/test/ko/010.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/011.JPG", "mask": "fryum/ground_truth/ko/011.png", "foreground": "fryum/foreground/test/ko/011.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/012.JPG", "mask": "fryum/ground_truth/ko/012.png", "foreground": "fryum/foreground/test/ko/012.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/013.JPG", "mask": "fryum/ground_truth/ko/013.png", "foreground": "fryum/foreground/test/ko/013.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/014.JPG", "mask": "fryum/ground_truth/ko/014.png", "foreground": "fryum/foreground/test/ko/014.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/015.JPG", "mask": "fryum/ground_truth/ko/015.png", "foreground": "fryum/foreground/test/ko/015.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/016.JPG", "mask": "fryum/ground_truth/ko/016.png", "foreground": "fryum/foreground/test/ko/016.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/017.JPG", "mask": "fryum/ground_truth/ko/017.png", "foreground": "fryum/foreground/test/ko/017.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/018.JPG", "mask": "fryum/ground_truth/ko/018.png", "foreground": "fryum/foreground/test/ko/018.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/019.JPG", "mask": "fryum/ground_truth/ko/019.png", "foreground": "fryum/foreground/test/ko/019.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/020.JPG", "mask": "fryum/ground_truth/ko/020.png", "foreground": "fryum/foreground/test/ko/020.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/021.JPG", "mask": "fryum/ground_truth/ko/021.png", "foreground": "fryum/foreground/test/ko/021.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/022.JPG", "mask": "fryum/ground_truth/ko/022.png", "foreground": "fryum/foreground/test/ko/022.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/023.JPG", "mask": "fryum/ground_truth/ko/023.png", "foreground": "fryum/foreground/test/ko/023.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/024.JPG", "mask": "fryum/ground_truth/ko/024.png", "foreground": "fryum/foreground/test/ko/024.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/025.JPG", "mask": "fryum/ground_truth/ko/025.png", "foreground": "fryum/foreground/test/ko/025.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/026.JPG", "mask": "fryum/ground_truth/ko/026.png", "foreground": "fryum/foreground/test/ko/026.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/027.JPG", "mask": "fryum/ground_truth/ko/027.png", "foreground": "fryum/foreground/test/ko/027.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/028.JPG", "mask": "fryum/ground_truth/ko/028.png", "foreground": "fryum/foreground/test/ko/028.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/029.JPG", "mask": "fryum/ground_truth/ko/029.png", "foreground": "fryum/foreground/test/ko/029.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/030.JPG", "mask": "fryum/ground_truth/ko/030.png", "foreground": "fryum/foreground/test/ko/030.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/031.JPG", "mask": "fryum/ground_truth/ko/031.png", "foreground": "fryum/foreground/test/ko/031.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/032.JPG", "mask": "fryum/ground_truth/ko/032.png", "foreground": "fryum/foreground/test/ko/032.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/033.JPG", "mask": "fryum/ground_truth/ko/033.png", "foreground": "fryum/foreground/test/ko/033.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/034.JPG", "mask": "fryum/ground_truth/ko/034.png", "foreground": "fryum/foreground/test/ko/034.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/035.JPG", "mask": "fryum/ground_truth/ko/035.png", "foreground": "fryum/foreground/test/ko/035.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/036.JPG", "mask": "fryum/ground_truth/ko/036.png", "foreground": "fryum/foreground/test/ko/036.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/037.JPG", "mask": "fryum/ground_truth/ko/037.png", "foreground": "fryum/foreground/test/ko/037.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/038.JPG", "mask": "fryum/ground_truth/ko/038.png", "foreground": "fryum/foreground/test/ko/038.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/039.JPG", "mask": "fryum/ground_truth/ko/039.png", "foreground": "fryum/foreground/test/ko/039.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/040.JPG", "mask": "fryum/ground_truth/ko/040.png", "foreground": "fryum/foreground/test/ko/040.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/041.JPG", "mask": "fryum/ground_truth/ko/041.png", "foreground": "fryum/foreground/test/ko/041.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/042.JPG", "mask": "fryum/ground_truth/ko/042.png", "foreground": "fryum/foreground/test/ko/042.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/043.JPG", "mask": "fryum/ground_truth/ko/043.png", "foreground": "fryum/foreground/test/ko/043.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/044.JPG", "mask": "fryum/ground_truth/ko/044.png", "foreground": "fryum/foreground/test/ko/044.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/045.JPG", "mask": "fryum/ground_truth/ko/045.png", "foreground": "fryum/foreground/test/ko/045.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/046.JPG", "mask": "fryum/ground_truth/ko/046.png", "foreground": "fryum/foreground/test/ko/046.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/047.JPG", "mask": "fryum/ground_truth/ko/047.png", "foreground": "fryum/foreground/test/ko/047.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/048.JPG", "mask": "fryum/ground_truth/ko/048.png", "foreground": "fryum/foreground/test/ko/048.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/049.JPG", "mask": "fryum/ground_truth/ko/049.png", "foreground": "fryum/foreground/test/ko/049.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/050.JPG", "mask": "fryum/ground_truth/ko/050.png", "foreground": "fryum/foreground/test/ko/050.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ko/051.JPG", "mask": "fryum/ground_truth/ko/051.png", "foreground": "fryum/foreground/test/ko/051.JPG", "clsname": "fryum", "label": 1, "label_name": "ko"}
+{"filename": "fryum/test/ok/000.JPG", "foreground": "fryum/foreground/test/ok/000.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/001.JPG", "foreground": "fryum/foreground/test/ok/001.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/002.JPG", "foreground": "fryum/foreground/test/ok/002.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/003.JPG", "foreground": "fryum/foreground/test/ok/003.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/004.JPG", "foreground": "fryum/foreground/test/ok/004.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/005.JPG", "foreground": "fryum/foreground/test/ok/005.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/006.JPG", "foreground": "fryum/foreground/test/ok/006.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/007.JPG", "foreground": "fryum/foreground/test/ok/007.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/008.JPG", "foreground": "fryum/foreground/test/ok/008.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/009.JPG", "foreground": "fryum/foreground/test/ok/009.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/010.JPG", "foreground": "fryum/foreground/test/ok/010.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/011.JPG", "foreground": "fryum/foreground/test/ok/011.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/012.JPG", "foreground": "fryum/foreground/test/ok/012.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/013.JPG", "foreground": "fryum/foreground/test/ok/013.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/014.JPG", "foreground": "fryum/foreground/test/ok/014.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/015.JPG", "foreground": "fryum/foreground/test/ok/015.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/016.JPG", "foreground": "fryum/foreground/test/ok/016.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/017.JPG", "foreground": "fryum/foreground/test/ok/017.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/018.JPG", "foreground": "fryum/foreground/test/ok/018.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/019.JPG", "foreground": "fryum/foreground/test/ok/019.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/020.JPG", "foreground": "fryum/foreground/test/ok/020.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/021.JPG", "foreground": "fryum/foreground/test/ok/021.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/022.JPG", "foreground": "fryum/foreground/test/ok/022.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/023.JPG", "foreground": "fryum/foreground/test/ok/023.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/024.JPG", "foreground": "fryum/foreground/test/ok/024.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/025.JPG", "foreground": "fryum/foreground/test/ok/025.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/026.JPG", "foreground": "fryum/foreground/test/ok/026.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/027.JPG", "foreground": "fryum/foreground/test/ok/027.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/028.JPG", "foreground": "fryum/foreground/test/ok/028.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/029.JPG", "foreground": "fryum/foreground/test/ok/029.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/030.JPG", "foreground": "fryum/foreground/test/ok/030.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/031.JPG", "foreground": "fryum/foreground/test/ok/031.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/032.JPG", "foreground": "fryum/foreground/test/ok/032.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/033.JPG", "foreground": "fryum/foreground/test/ok/033.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/034.JPG", "foreground": "fryum/foreground/test/ok/034.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/035.JPG", "foreground": "fryum/foreground/test/ok/035.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/036.JPG", "foreground": "fryum/foreground/test/ok/036.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/037.JPG", "foreground": "fryum/foreground/test/ok/037.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/038.JPG", "foreground": "fryum/foreground/test/ok/038.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/039.JPG", "foreground": "fryum/foreground/test/ok/039.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/040.JPG", "foreground": "fryum/foreground/test/ok/040.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/041.JPG", "foreground": "fryum/foreground/test/ok/041.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/042.JPG", "foreground": "fryum/foreground/test/ok/042.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/043.JPG", "foreground": "fryum/foreground/test/ok/043.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/044.JPG", "foreground": "fryum/foreground/test/ok/044.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/045.JPG", "foreground": "fryum/foreground/test/ok/045.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/046.JPG", "foreground": "fryum/foreground/test/ok/046.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/047.JPG", "foreground": "fryum/foreground/test/ok/047.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}
+{"filename": "fryum/test/ok/048.JPG", "foreground": "fryum/foreground/test/ok/048.JPG", "clsname": "fryum", "label": 0, "label_name": "ok"}

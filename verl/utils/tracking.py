@@ -542,9 +542,9 @@ class ValidationGenerationsLogger:
                     original_image = turn_data.get("original_image", None)
                     cropped_images = turn_data.get("cropped_images", [])
                     
-                    print(f"[DEBUG] Turn {turn_num}: role={role}, has_original_image={original_image is not None}, "
-                          f"original_image_type={type(original_image)}, has_cropped_images={len(cropped_images) > 0}, "
-                          f"cropped_images_count={len(cropped_images)}")
+                    # print(f"[DEBUG] Turn {turn_num}: role={role}, has_original_image={original_image is not None}, "
+                    #       f"original_image_type={type(original_image)}, has_cropped_images={len(cropped_images) > 0}, "
+                    #       f"cropped_images_count={len(cropped_images)}")
                     
                     # Process original image
                     original_image_obj = None
@@ -592,9 +592,9 @@ class ValidationGenerationsLogger:
                     turn_score = score if turn_num == len(conversation_history) - 1 else None
                     
                     # Add row to table
-                    print(f"[DEBUG] Adding row to table: turn={turn_num}, role={role}, "
-                          f"has_original_image_obj={original_image_obj is not None}, "
-                          f"has_cropped_image_obj={cropped_image_obj is not None}")
+                    # print(f"[DEBUG] Adding row to table: turn={turn_num}, role={role}, "
+                    #       f"has_original_image_obj={original_image_obj is not None}, "
+                    #       f"has_cropped_image_obj={cropped_image_obj is not None}")
                     
                     # Add bbox_iou only on the last turn
                     turn_bbox_iou = bbox_iou if turn_num == len(conversation_history) - 1 else None
