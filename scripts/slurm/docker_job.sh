@@ -1,7 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Mvtec-Visa     # 任务名称
-#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
-#SBATCH --nodelist=tw051
+#SBATCH --job-name=Mvtec-AIG    # 任务名称
+#SBATCH --partition=AIG_Models  # 分区名称
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
@@ -10,6 +9,7 @@
 #SBATCH --time=8:00:00                 # 任务超时时间，根据训练时长调整
 #SBATCH --output=log/deepeyes_%j.out       # 输出日志文件
 #SBATCH --error=log/deepeyes_%j.err        # 错误日志文件
+#--nodelist=tw051
 # Silo_Customer_Engineering,AIG_Models
 # 设置容器名称
 CONTAINER_NAME="vllm-deep"
@@ -204,7 +204,7 @@ echo "在容器 $CONTAINER_NAME 中执行训练脚本..."
 # 在指定的Docker容器中执行训练命令
 # 使用 /bin/bash -c 将多个命令串联起来
 # "&&" 确保只有前一个命令成功完成后，才会执行下一个命令
-docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_iad.sh"
+docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_iad_64.sh"
 # docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_deepeyes.sh"
 
 # 检查上一个命令的退出状态
