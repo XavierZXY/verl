@@ -2,7 +2,7 @@
 
 set -x
 export VLLM_USE_V1=1
-# export VERL_LOGGING_LEVEL=INFO
+export VERL_LOGGING_LEVEL=DEBUG
 export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
@@ -37,7 +37,7 @@ N_GPUS_PER_NODE=8
 N_ROLLOUT=16
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Compare-0.3format_reward-0.7acc_reward-0.4tool_reward--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Compare-debug-reward-bonus--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -85,7 +85,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_parallel_calls=1 \
-    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_iad/configs/image_zoom_in_tool_config.yaml \
+    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_iad/configs/image_tools_config.yaml \
     trainer.critic_warmup=0 \
     trainer.logger=['wandb','swanlab','console'] \
     trainer.val_before_train=True \

@@ -714,20 +714,41 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     else:
         acc_reward = 0.0
     
-    # 3. Tool reward: combination of tool usage and bbox IoU
-    # Part 1: Check if tools were called
+    # 3. Tool reward: combination of tool usage, bbox IoU, and tool diversity bonus
+    # Part 1: Check if tools were called and detect tool types
     has_tool_usage = count_tool_call_1 > 0
     tool_usage_reward = 1.0 if has_tool_usage else 0.0
     
     # Part 2: Compute bbox IoU from tool_call parameters or mask image
+    # Also detect which tools were used for diversity bonus
     bbox_iou = 0.0
+    tools_used = set()
+    
     if has_tool_usage:
-        # Extract bbox from the last tool_call only
+        # Extract all tool calls
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
         tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
         
+        # Detect all tools used
+        for tool_call_content in tool_calls:
+            try:
+                tool_data = json.loads(tool_call_content.strip())
+                # Handle both list and dict formats
+                if isinstance(tool_data, list):
+                    for item in tool_data:
+                        if isinstance(item, dict):
+                            tool_name = item.get("tool_name") or item.get("name")
+                            if tool_name:
+                                tools_used.add(tool_name)
+                elif isinstance(tool_data, dict):
+                    tool_name = tool_data.get("tool_name") or tool_data.get("name")
+                    if tool_name:
+                        tools_used.add(tool_name)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+        
+        # Extract bbox from the last tool_call for IoU calculation (only for zoom tool)
         pred_boxes = []
-        # Only process the last tool_call
         if tool_calls:
             tool_call_content = tool_calls[-1]
             try:
@@ -738,6 +759,15 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                     bbox = args.get("bbox_2d") or args.get("bbox2d")
                     if bbox and isinstance(bbox, list) and len(bbox) == 4:
                         pred_boxes.append([float(v) for v in bbox])
+                elif isinstance(tool_data, list):
+                    # Handle list format
+                    for item in tool_data:
+                        if isinstance(item, dict):
+                            args = item.get("parameters", {}) or item.get("arguments", {})
+                            bbox = args.get("bbox_2d") or args.get("bbox2d")
+                            if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                                pred_boxes.append([float(v) for v in bbox])
+                                break  # Only take the first bbox from last tool call
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
@@ -766,8 +796,15 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 else:
                     logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
     
+    # Part 3: Tool diversity bonus
+    # Give extra reward if both tools were used
+    tool_diversity_bonus = 0.0
+    if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
+        tool_diversity_bonus = 1.0
+        logger.debug("Tool diversity bonus: both zoom and reference tools used")
+    
     # Combined tool reward
-    tool_reward = tool_usage_reward + 4 * bbox_iou
+    tool_reward = tool_usage_reward + 4 * bbox_iou + tool_diversity_bonus
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
@@ -777,8 +814,10 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     logger.debug(
         f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
         f"tool_usage={tool_usage_reward:.2f}, bbox_iou={bbox_iou:.2f}, "
+        f"tool_diversity_bonus={tool_diversity_bonus:.2f}, "
         f"tool={tool_reward:.2f}, final={final_score:.2f}"
     )
+    logger.debug(f"Tools used: {tools_used}")
     
     return {
         "score": final_score,
@@ -786,6 +825,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         "acc_reward": acc_reward,
         "tool_reward": tool_reward,
         "bbox_iou": bbox_iou,
+        "tool_diversity_bonus": tool_diversity_bonus,
     }
 
 
@@ -878,5 +918,40 @@ Let me check for defects.
     time_start = time.time()
     score4 = compute_score("defect_detection", test_case_4, ground_truth_1, extra_info_1)
     print(f"Score: {score4}")
+    time_end = time.time()
+    print(f"Time: {time_end - time_start}")
+    
+    # Test case 5: Using both tools (zoom + reference) - should get diversity bonus
+    test_case_5 = """<think>I see some texture variations. Let me check the reference image first.</think>
+<tool_call>
+[{"tool_name": "image_reference_tool", "parameters": {"reason": "to compare surface texture patterns"}}]
+</tool_call>
+<tool_response>
+Reference image retrieved successfully.
+</tool_response>
+<think>After comparing with the reference, I notice a potential defect. Let me zoom in to confirm.</think>
+<tool_call>
+[{"tool_name": "image_zoom_in_tool", "parameters": {"bbox_2d": [590, 670, 280, 700]}}]
+</tool_call>
+<tool_response>
+Zoomed in on the region [590, 670, 280, 700].
+</tool_response>
+<think>After using both tools, I can confirm there is a defect in this region.</think>
+<location>[{"bbox2d": [590, 670, 280, 700]}]</location>
+<type>surface</type>
+<answer>yes</answer>"""
+    
+    ground_truth_5 = {"answer": "yes", "bboxes": [{"bbox_2d": [590, 670, 280, 700]}]}
+    extra_info_5 = {
+        "question": "Does this image contain any defects?",
+        "bboxes": [{"bbox_2d": [590, 670, 280, 700]}],
+    }
+    
+    print("\n=== Test Case 5: Using both tools (should get diversity bonus) ===")
+    time_start = time.time()
+    score5 = compute_score("defect_detection", test_case_5, ground_truth_5, extra_info_5)
+    print(f"Score: {score5}")
+    print(f"Tool diversity bonus: {score5.get('tool_diversity_bonus', 0.0)}")
+    print(f"Tools used: {score5.get('tools_used', [])}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")

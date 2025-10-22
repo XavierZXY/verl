@@ -182,16 +182,27 @@ class ImageReferenceTool(BaseTool):
                 {"success": False, "reference_available": False},
             )
 
+        # Create a copy of the reference image to avoid "Operation on closed image" error
+        # This ensures the returned image is independent of the stored reference
+        try:
+            reference_image_copy = reference_image.copy()
+            logger.info(f"Returning reference image copy for instance {instance_id}, size: {reference_image_copy.size}")
+        except Exception as e:
+            logger.error(f"Failed to copy reference image for instance {instance_id}: {e}")
+            return (
+                ToolResponse(text="Error: Failed to copy reference image."),
+                -0.05,
+                {"success": False, "error": "copy_failed"},
+            )
+
         # Construct response text
         response_text = "Here is a defect-free reference image of the same object class for comparison."
         if reason:
             response_text = f"Retrieved reference image for: {reason}"
 
-        logger.info(f"Returning reference image for instance {instance_id}, size: {reference_image.size}")
-
         return (
             ToolResponse(
-                image=[reference_image],
+                image=[reference_image_copy],
                 text=response_text,
             ),
             0.0,  # Neutral reward for retrieving reference
