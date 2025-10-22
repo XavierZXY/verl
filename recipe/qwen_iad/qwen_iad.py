@@ -225,7 +225,7 @@ class CustomRLHFDataset(RLHFDataset):
         index = row_dict.get("extra_info", {}).get("index", 0)
         
         # Get good reference image from extra_info if available
-        good_reference_image = row_dict.get("extra_info", {}).get("good_reference_image")
+        reference_image = row_dict.get("extra_info", {}).get("reference_image")
         
         tools_kwargs = {
             "image_zoom_in_tool": {
@@ -235,7 +235,7 @@ class CustomRLHFDataset(RLHFDataset):
                 # "release_kwargs": {},
             },
             "image_reference_tool": {
-                "create_kwargs": {"good_reference_image": good_reference_image},
+                "create_kwargs": {"reference_image": reference_image},
                 # "execute_kwargs": {},
                 # "calc_reward_kwargs": {},
                 # "release_kwargs": {},
