@@ -25,19 +25,19 @@ DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/test/test.parquet
 REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
-TOTAL_EPOCHS=10
-BATCH_SIZE=16
-PPO_BATCH_SIZE=16
-MICRO_BATCH_SIZE=2
+TOTAL_EPOCHS=5
+BATCH_SIZE=128
+PPO_BATCH_SIZE=128
+MICRO_BATCH_SIZE=16
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=8
+LOG_PER_GPU_BATCH_SIZE=16
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.3
+ROLLOUT_UTIL=0.5
 N_GPUS_PER_NODE=8
-N_ROLLOUT=8
+N_ROLLOUT=16
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="TW-debug-mi325-new-data"
+EXPERIMENT_NAME="mi325-zoom-roll${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

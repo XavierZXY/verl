@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Mvtec-AIG    # 任务名称
-#SBATCH --partition=AIG_Models  # 分区名称
+#SBATCH --job-name=Mvtec-64    # 任务名称
+#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
