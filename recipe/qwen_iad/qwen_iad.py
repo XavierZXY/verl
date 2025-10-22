@@ -420,6 +420,128 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
     return precision
 
 
+def _validate_bbox(left, top, right, bottom):
+    """
+    Validate that a bounding box has positive dimensions.
+    
+    Args:
+        left, top, right, bottom: Bounding box coordinates
+        
+    Returns:
+        bool: True if bbox is valid, False otherwise
+    """
+    try:
+        return right > left and bottom > top
+    except Exception as e:
+        logger.warning(f"Bbox validation error: {e}")
+        return False
+
+
+def _maybe_resize_bbox(bbox_2d, image_width, image_height, min_dimension=28):
+    """
+    Clamp, validate, and potentially resize a bounding box.
+    
+    This function ensures the final bounding box is within image bounds and meets the minimum
+    dimension requirements. If the initial box is too small, it attempts to expand it
+    from its center. It performs a final check to guarantee the output dimensions are valid.
+    
+    This implements the same logic used in ImageZoomInTool to ensure consistency between
+    the bbox used for IoU calculation and the bbox actually used by the tool.
+    
+    Args:
+        bbox_2d: Bounding box as [left, top, right, bottom]
+        image_width: Width of the image
+        image_height: Height of the image
+        min_dimension: Minimum dimension requirement (default: 28, same as ImageZoomInTool)
+        
+    Returns:
+        A valid bounding box as a list of coordinates, or None if validation fails.
+    """
+    from math import floor, ceil
+    
+    left, top, right, bottom = bbox_2d
+    
+    # 1. Clamp the initial bounding box to the image dimensions.
+    left = max(0.0, float(left))
+    top = max(0.0, float(top))
+    right = min(float(image_width), float(right))
+    bottom = min(float(image_height), float(bottom))
+    
+    # 2. If clamped bbox is invalid, return immediately.
+    if not _validate_bbox(left, top, right, bottom):
+        return None
+    
+    current_bbox = [left, top, right, bottom]
+    height = bottom - top
+    width = right - left
+    
+    # 3. If the box is too small, attempt to resize it.
+    if height < min_dimension or width < min_dimension:
+        logger.debug(f"Bbox {width}x{height} is smaller than {min_dimension}, attempting resize.")
+        center_x = (left + right) / 2.0
+        center_y = (top + bottom) / 2.0
+        
+        min_dim = min(height, width)
+        if min_dim == 0:  # Safeguard for zero-area boxes
+            return None
+        
+        # 1. Calculate the target dimensions to make the smallest side min_dimension.
+        ratio = min_dimension / min_dim
+        target_width = width * ratio
+        target_height = height * ratio
+        
+        # 2. If the target size is larger than the image, scale it down to fit.
+        if target_width > image_width:
+            scale_down = image_width / target_width
+            target_width = image_width
+            target_height *= scale_down
+        
+        if target_height > image_height:
+            scale_down = image_height / target_height
+            target_height = image_height
+            target_width *= scale_down
+        
+        # 3. Determine the coordinates for the box centered on the original center.
+        new_half_width = target_width / 2.0
+        new_half_height = target_height / 2.0
+        new_left = center_x - new_half_width
+        new_top = center_y - new_half_height
+        
+        # 4. Shift the box if it extends beyond the image boundaries to keep its size.
+        if new_left < 0:
+            new_left = 0
+        if new_top < 0:
+            new_top = 0
+        if new_left + target_width > image_width:
+            new_left = image_width - target_width
+        if new_top + target_height > image_height:
+            new_top = image_height - target_height
+        
+        new_right = new_left + target_width
+        new_bottom = new_top + target_height
+        
+        # Use floor and ceil for final integer coordinates.
+        current_bbox = [floor(new_left), floor(new_top), ceil(new_right), ceil(new_bottom)]
+    
+    # 4. Final validation on the resulting bounding box (either original or resized).
+    final_left, final_top, final_right, final_bottom = current_bbox
+    if not _validate_bbox(final_left, final_top, final_right, final_bottom):
+        logger.warning(f"Final bbox is invalid after processing: {current_bbox}")
+        return None
+    
+    final_height = floor(final_bottom) - floor(final_top)
+    final_width = floor(final_right) - floor(final_left)
+    
+    if final_height < min_dimension or final_width < min_dimension:
+        logger.warning(
+            f"Final bbox size ({final_width}x{final_height}) are still smaller than minimum ({min_dimension}). "
+            f"Original bbox: {bbox_2d}, original image size: {image_width}x{image_height}"
+        )
+        return None
+    
+    return current_bbox
+
+
 def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
     """
     Compute IoU between predicted bboxes and ground truth mask image.
@@ -468,10 +590,23 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
         # Get image dimensions
         height, width = gt_mask_binary.shape
         
-        # Create prediction mask from bboxes
+        # Apply resize bbox logic to match what zoom tool actually uses
+        resized_pred_boxes = []
+        for box in pred_boxes:
+            resized_box = _maybe_resize_bbox(box, image_width=width, image_height=height)
+            if resized_box is not None:
+                resized_pred_boxes.append(resized_box)
+            else:
+                logger.warning(f"Bbox {box} failed resize validation, skipping")
+        
+        if len(resized_pred_boxes) == 0:
+            logger.warning("No valid resized boxes after resize validation")
+            return 0.0
+        
+        # Create prediction mask from resized bboxes
         pred_mask = np.zeros((height, width), dtype=np.uint8)
         
-        for box in pred_boxes:
+        for box in resized_pred_boxes:
             x1, y1, x2, y2 = box
             # Convert to integer coordinates and clip to image bounds
             x1 = int(max(0, min(width - 1, x1)))
@@ -486,12 +621,60 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
         # Compute IoU between prediction mask and ground truth mask
         intersection = np.logical_and(pred_mask, gt_mask_binary).sum()
         union = np.logical_or(pred_mask, gt_mask_binary).sum()
-        
         if union == 0:
             return 1.0 if intersection == 0 else 0.0
         
         iou = float(intersection) / float(union)
-        return iou
+        
+        # Apply size penalty if prediction area is much larger than ground truth
+        pred_area = float(pred_mask.sum())
+        gt_area = float(gt_mask_binary.sum())
+        
+        size_penalty = 1.0
+        if gt_area > 0:
+            area_ratio = pred_area / gt_area
+            if area_ratio > 8.0:  # Prediction area is 3x larger than GT
+                import math
+                size_penalty = 1.0 / (1.0 + math.log(area_ratio / 3.0))
+                logger.debug(f"Size penalty applied: area_ratio={area_ratio:.2f}, penalty={size_penalty:.4f}")
+        
+        iou_with_penalty = iou * size_penalty
+        
+        # print intersection and union
+        print(f"[DEBUG IOU]------------ Intersection: {intersection}, Union: {union}, IoU: {iou:.4f}, "
+              f"Pred_area: {pred_area:.0f}, GT_area: {gt_area:.0f}, Size_penalty: {size_penalty:.4f}, "
+              f"Final_IoU: {iou_with_penalty:.4f} ------------")
+        
+        # Save comparison image of pred_mask and gt_mask_binary
+        # try:
+        #     import time
+        #     os.makedirs("logs/compare_iou", exist_ok=True)
+            
+        #     # Convert masks to binary images (0 or 255)
+        #     pred_img = Image.fromarray((pred_mask * 255).astype(np.uint8), mode='L')
+        #     gt_img = Image.fromarray((gt_mask_binary * 255).astype(np.uint8), mode='L')
+            
+        #     # Create a combined image with pred_mask on the left and gt_mask on the right
+        #     combined_width = width * 2
+        #     combined_height = height
+        #     combined_img = Image.new('L', (combined_width, combined_height))
+            
+        #     # Paste pred_mask on the left and gt_mask on the right
+        #     combined_img.paste(pred_img, (0, 0))
+        #     combined_img.paste(gt_img, (width, 0))
+            
+        #     # Generate unique filename with timestamp
+        #     timestamp = int(time.time() * 1000000)  # microseconds for uniqueness
+        #     filename = f"logs/compare_iou/mask_comparison_{float(intersection) / float(union)}_{timestamp}.png"
+        #     combined_img.save(filename)
+        #     logger.info(f"Saved mask comparison image to {filename}")
+        # except Exception as e:
+        #     logger.warning(f"Failed to save mask comparison image: {e}")
+        
+        
+        # logger.debug(f"Mask IoU computed: original_boxes={len(pred_boxes)}, resized_boxes={len(resized_pred_boxes)}, iou={iou:.4f}")
+        
+        return iou_with_penalty
         
     except Exception as e:
         logger.error(f"Failed to compute mask IoU: {e}")
@@ -781,6 +964,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             # Priority: mask-based IoU > bbox-based IoU
             if gt_mask_bytes is not None and isinstance(gt_mask_bytes, bytes):
                 # Use mask-based IoU (more accurate for defective samples)
+                # NOTE: _compute_mask_iou applies _maybe_resize_bbox to match the actual
+                # bbox used by ImageZoomInTool, ensuring consistency in IoU calculation
                 bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3)
                 logger.debug(f"Using mask-based IoU: {bbox_iou:.4f}")
             else:
@@ -788,6 +973,9 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # This handles two cases:
                 # 1. Good samples (label=0) without mask_image
                 # 2. Legacy data without mask_image field
+                # NOTE: For bbox-based IoU, we use pred_boxes directly without resize
+                # because we don't have image dimensions. This is acceptable since
+                # bbox-based IoU is mainly for good samples where bbox accuracy is less critical.
                 
                 gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
                 bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
@@ -803,8 +991,12 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         tool_diversity_bonus = 1.0
         logger.debug("Tool diversity bonus: both zoom and reference tools used")
     
+    # Apply sqrt transformation to amplify small IoU differences
+    bbox_iou_transformed = math.pow(bbox_iou, 1/3)
+    logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (sqrt)")
+    
     # Combined tool reward
-    tool_reward = tool_usage_reward + 4 * bbox_iou + tool_diversity_bonus
+    tool_reward = tool_usage_reward + 4 * bbox_iou_transformed + tool_diversity_bonus
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
@@ -813,7 +1005,8 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Log for debugging
     logger.debug(
         f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-        f"tool_usage={tool_usage_reward:.2f}, bbox_iou={bbox_iou:.2f}, "
+        f"tool_usage={tool_usage_reward:.2f}, bbox_iou_raw={bbox_iou:.4f}, "
+        f"bbox_iou_transformed={bbox_iou_transformed:.4f}, "
         f"tool_diversity_bonus={tool_diversity_bonus:.2f}, "
         f"tool={tool_reward:.2f}, final={final_score:.2f}"
     )
@@ -824,7 +1017,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         "format_reward": format_reward,
         "acc_reward": acc_reward,
         "tool_reward": tool_reward,
-        "bbox_iou": bbox_iou,
+        "bbox_iou": bbox_iou_transformed,
         "tool_diversity_bonus": tool_diversity_bonus,
     }
 

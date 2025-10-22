@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Mvtec-64    # 任务名称
+#SBATCH --job-name=Good-ref    # 任务名称
 #SBATCH --partition=Silo_Customer_Engineering  # 分区名称
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
@@ -138,6 +138,10 @@ install_packages() {
         echo "警告：Python包安装失败，但继续执行训练脚本。"
     fi
 }
+# 停止所有容器
+docker stop $(docker ps -q)
+sleep 10
+
 
 # 检查容器是否正在运行
 if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then

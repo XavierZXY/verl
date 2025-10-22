@@ -2,7 +2,7 @@
 
 set -x
 export VLLM_USE_V1=1
-export VERL_LOGGING_LEVEL=DEBUG
+# export VERL_LOGGING_LEVEL=DEBUG
 export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
@@ -34,10 +34,10 @@ LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.3
 N_GPUS_PER_NODE=8
-N_ROLLOUT=16
+N_ROLLOUT=8
 GRAD_CLIP=1
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Compare-debug-reward-bonus--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="IOU-debug-reward-bonus--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -91,7 +91,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
-    trainer.save_freq=50 \
+    trainer.save_freq=20 \
     trainer.test_freq=5 \
     trainer.validation_data_dir=${BASEDIR}/logs/validation_data/${EXPERIMENT_NAME} \
     trainer.project_name=${PROJECT_NAME} \

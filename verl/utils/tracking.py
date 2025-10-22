@@ -500,8 +500,8 @@ class ValidationGenerationsLogger:
         """
         import wandb
 
-        # Create table columns - added tool_name, original_image, cropped_image and reward components
-        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score", "bbox_iou", "acc_reward"]
+        # Create table columns - added tool_name, original_image, cropped_image, mask_image and reward components
+        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "mask_image", "tool_reward", "score", "bbox_iou", "acc_reward"]
         
         # Use different table instances for train and val
         table_attr_name = f"multiturn_table_{phase}"
@@ -524,7 +524,7 @@ class ValidationGenerationsLogger:
             
             # If conversation_history is available (training rollout), use it
             if conversation_history:
-                print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
+                # print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
                 for turn_num, turn_data in enumerate(conversation_history):
                     role = turn_data.get("role", "unknown")
                     content = turn_data.get("content", "")
@@ -549,11 +549,12 @@ class ValidationGenerationsLogger:
                     # Process original image
                     original_image_obj = None
                     if role == "tool" and original_image is not None:
-                        print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
-                              f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
+                        pass
+                        # print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
+                            #   f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
                         try:
                             original_image_obj = wandb.Image(original_image, caption=f"Original - {tool_name}")
-                            print(f"[DEBUG] Successfully converted original_image to wandb.Image")
+                            # print(f"[DEBUG] Successfully converted original_image to wandb.Image")
                         except Exception as e:
                             print(f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}")
                             import traceback
@@ -600,6 +601,20 @@ class ValidationGenerationsLogger:
                     turn_bbox_iou = bbox_iou if turn_num == len(conversation_history) - 1 else None
                     turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(conversation_history) - 1 else None
                     
+                    # Process mask image (only show on last turn)
+                    mask_image_obj = None
+                    if turn_num == len(conversation_history) - 1:
+                        mask_image_bytes = sample_data.get("mask_image", None)
+                        if mask_image_bytes is not None and isinstance(mask_image_bytes, bytes):
+                            try:
+                                from io import BytesIO
+                                from PIL import Image
+                                mask_image_pil = Image.open(BytesIO(mask_image_bytes))
+                                mask_image_obj = wandb.Image(mask_image_pil, caption="Ground Truth Mask")
+                                # print(f"[DEBUG] Successfully converted mask_image to wandb.Image for sample {uid}")
+                            except Exception as e:
+                                print(f"[DEBUG] ERROR: Failed to convert mask image to wandb.Image: {e}")
+                    
                     new_table.add_data(
                         step, 
                         str(uid)[:12],  # Truncate uid for readability
@@ -609,6 +624,7 @@ class ValidationGenerationsLogger:
                         tool_name if tool_name else None,  # Use None instead of ""
                         original_image_obj,  # Original image before tool processing
                         cropped_image_obj,   # Cropped/processed image after tool
+                        mask_image_obj,      # Ground truth mask image
                         tool_reward if tool_reward is not None else None,  # Use None instead of ""
                         turn_score,
                         turn_bbox_iou,  # bbox_iou
@@ -657,6 +673,20 @@ class ValidationGenerationsLogger:
                     turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else None
                     turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(messages) - 1 else None
                     
+                    # Process mask image (only show on last turn)
+                    mask_image_obj = None
+                    if turn_num == len(messages) - 1:
+                        mask_image_bytes = sample_data.get("mask_image", None)
+                        if mask_image_bytes is not None and isinstance(mask_image_bytes, bytes):
+                            try:
+                                from io import BytesIO
+                                from PIL import Image
+                                mask_image_pil = Image.open(BytesIO(mask_image_bytes))
+                                mask_image_obj = wandb.Image(mask_image_pil, caption="Ground Truth Mask")
+                                # print(f"[DEBUG] Successfully converted mask_image to wandb.Image for sample {sample_idx}")
+                            except Exception as e:
+                                print(f"[DEBUG] ERROR: Failed to convert mask image to wandb.Image: {e}")
+                    
                     # Add row to table
                     new_table.add_data(
                         step, 
@@ -667,6 +697,7 @@ class ValidationGenerationsLogger:
                         None,  # tool_name - use None instead of ""
                         None,  # original_image - not available in legacy format
                         image_obj,  # cropped_image (or tool result image)
+                        mask_image_obj,  # Ground truth mask image
                         None,  # tool_reward - use None instead of ""
                         turn_score,
                         turn_bbox_iou,  # bbox_iou
@@ -689,7 +720,7 @@ class ValidationGenerationsLogger:
         import swanlab
         
         swanlab_table = swanlab.echarts.Table()
-        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou", "acc_reward"]
+        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou", "acc_reward", "has_mask"]
         
         rows = []
         for sample_idx, sample_data in enumerate(multiturn_data):
@@ -720,7 +751,13 @@ class ValidationGenerationsLogger:
                 turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else ""
                 turn_acc_reward = acc_reward if turn_num == len(messages) - 1 else ""
                 
-                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou, turn_acc_reward])
+                # Check if mask image exists (only on last turn)
+                has_mask = ""
+                if turn_num == len(messages) - 1:
+                    mask_image_bytes = sample_data.get("mask_image", None)
+                    has_mask = "Yes" if (mask_image_bytes is not None and isinstance(mask_image_bytes, bytes)) else "No"
+                
+                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou, turn_acc_reward, has_mask])
         
         swanlab_table.add(headers=headers, rows=rows)
         table_name = f"{phase}/multiturn_generations"
