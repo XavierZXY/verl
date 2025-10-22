@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Mvtec-AIG    # 任务名称
-#SBATCH --partition=AIG_Models  # 分区名称
+#SBATCH --job-name=Mvtec-64    # 任务名称
+#SBATCH --partition=Silo_Customer_Engineering  # 分区名称
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8
@@ -150,8 +150,36 @@ if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
         if [ $? -eq 0 ]; then
             echo "容器 $CONTAINER_NAME 启动成功。"
         else
-            echo "错误：无法启动容器 $CONTAINER_NAME。"
-            exit 1
+            echo "错误：无法启动容器 $CONTAINER_NAME。正在删除并重新创建..."
+            docker rm -f "$CONTAINER_NAME"
+            
+            # 创建新容器
+            docker run -d --name=vllm-deep \
+                --volume /home/takisobe@amd.com/zxy:/home/takisobe@amd.com/zxy \
+                --device /dev/dri:/dev/dri \
+                --device /dev/kfd:/dev/kfd \
+                --shm-size=400g \
+                --cap-add SYS_PTRACE \
+                --privileged \
+                --security-opt seccomp=unconfined \
+                --group-add video \
+                -w /home/takisobe@amd.com/zxy \
+                -p 9091:9091 \
+                -p 9092:9092 \
+                -t rocm/vllm:rocm6.4.1_vllm_0.10.0_20250812
+            
+            if [ $? -eq 0 ]; then
+                echo "容器 $CONTAINER_NAME 重新创建成功。"
+                
+                # 等待容器完全启动
+                sleep 5
+                
+                # 安装必要的Python包
+                install_packages
+            else
+                echo "错误：无法重新创建容器 $CONTAINER_NAME。"
+                exit 1
+            fi
         fi
     else
         echo "容器 $CONTAINER_NAME 不存在，正在创建新容器..."
@@ -204,7 +232,7 @@ echo "在容器 $CONTAINER_NAME 中执行训练脚本..."
 # 在指定的Docker容器中执行训练命令
 # 使用 /bin/bash -c 将多个命令串联起来
 # "&&" 确保只有前一个命令成功完成后，才会执行下一个命令
-docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_iad_64.sh"
+docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl-compare/ && bash scripts/iad/train_iad.sh"
 # docker exec "$CONTAINER_NAME" /bin/bash -c "cd codes/verl/ && bash scripts/iad/train_deepeyes.sh"
 
 # 检查上一个命令的退出状态
