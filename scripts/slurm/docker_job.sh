@@ -150,8 +150,36 @@ if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
         if [ $? -eq 0 ]; then
             echo "容器 $CONTAINER_NAME 启动成功。"
         else
-            echo "错误：无法启动容器 $CONTAINER_NAME。"
-            exit 1
+            echo "错误：无法启动容器 $CONTAINER_NAME。正在删除并重新创建..."
+            docker rm -f "$CONTAINER_NAME"
+            
+            # 创建新容器
+            docker run -d --name=vllm-deep \
+                --volume /home/takisobe@amd.com/zxy:/home/takisobe@amd.com/zxy \
+                --device /dev/dri:/dev/dri \
+                --device /dev/kfd:/dev/kfd \
+                --shm-size=400g \
+                --cap-add SYS_PTRACE \
+                --privileged \
+                --security-opt seccomp=unconfined \
+                --group-add video \
+                -w /home/takisobe@amd.com/zxy \
+                -p 9091:9091 \
+                -p 9092:9092 \
+                -t rocm/vllm:rocm6.4.1_vllm_0.10.0_20250812
+            
+            if [ $? -eq 0 ]; then
+                echo "容器 $CONTAINER_NAME 重新创建成功。"
+                
+                # 等待容器完全启动
+                sleep 5
+                
+                # 安装必要的Python包
+                install_packages
+            else
+                echo "错误：无法重新创建容器 $CONTAINER_NAME。"
+                exit 1
+            fi
         fi
     else
         echo "容器 $CONTAINER_NAME 不存在，正在创建新容器..."
