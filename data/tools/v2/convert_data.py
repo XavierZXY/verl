@@ -349,7 +349,7 @@ def convert(
 
         # Add good reference image to extra_info if available
         if good_image_bytes is not None:
-            extra_info["good_reference_image"] = good_image_bytes
+            extra_info["reference_image"] = good_image_bytes
 
         record = Record(
             data_source="vstar",
@@ -402,13 +402,13 @@ def convert(
                     images_serialized.append({"bytes": base64.b64encode(b).decode("ascii")})
                 row_dict["images"] = images_serialized
                 
-                # Serialize mask_image and good_reference_image in extra_info if present
+                # Serialize mask_image and reference_image in extra_info if present
                 if "extra_info" in row_dict:
                     extra_info = row_dict["extra_info"]
                     if "mask_image" in extra_info and isinstance(extra_info["mask_image"], bytes):
                         extra_info["mask_image"] = base64.b64encode(extra_info["mask_image"]).decode("ascii")
-                    if "good_reference_image" in extra_info and isinstance(extra_info["good_reference_image"], bytes):
-                        extra_info["good_reference_image"] = base64.b64encode(extra_info["good_reference_image"]).decode("ascii")
+                    if "reference_image" in extra_info and isinstance(extra_info["reference_image"], bytes):
+                        extra_info["reference_image"] = base64.b64encode(extra_info["reference_image"]).decode("ascii")
                 
                 f.write(json.dumps(row_dict, ensure_ascii=False) + "\n")
         log.info(

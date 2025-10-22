@@ -8,8 +8,9 @@ from io import BytesIO
 from typing import Any, Optional
 
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageDraw
 from rich.logging import RichHandler
+import numpy as np
 
 try:  # Python 3.11+
     import tomllib  # type: ignore[attr-defined]
@@ -214,35 +215,128 @@ def _read_mask_image_bytes(
         return None
 
 
-def _build_good_image_map(items: list[dict[str, Any]], dataset_root: str) -> dict[str, str]:
+def _build_defect_reference_map(items: list[dict[str, Any]], dataset_root: str) -> dict[str, tuple[str, str]]:
     """
-    Build a mapping from class name to a good image path.
-    For each class, select the first good image found.
+    Build a mapping from class name to a defect image path and its mask path.
+    For each class, select the first defect image with mask found.
 
     Args:
         items: List of dataset items
         dataset_root: Root directory of dataset
 
     Returns:
-        Dictionary mapping class name to good image path
+        Dictionary mapping class name to (defect_image_path, mask_path) tuple
     """
-    good_image_map: dict[str, str] = {}
+    defect_reference_map: dict[str, tuple[str, str]] = {}
 
     for item in items:
         clsname = item.get("clsname")
         label = item.get("label")
 
-        # Skip if not a good sample or class already has a good image
-        if label != 0 or not clsname or clsname in good_image_map:
+        # Skip if not a defect sample or class already has a reference image
+        if label != 1 or not clsname or clsname in defect_reference_map:
             continue
 
-        # Try to resolve image path
+        # Try to resolve image path and mask path
         img_path = _resolve_image_path(item, dataset_root)
-        if img_path and os.path.exists(img_path):
-            good_image_map[clsname] = img_path
-            log.info(f"Selected good image for class '{clsname}': {img_path}")
+        mask_path = _resolve_mask_path(item, dataset_root)
+        
+        if img_path and mask_path and os.path.exists(img_path) and os.path.exists(mask_path):
+            defect_reference_map[clsname] = (img_path, mask_path)
+            log.info(f"Selected defect reference image for class '{clsname}': {img_path} with mask: {mask_path}")
 
-    return good_image_map
+    return defect_reference_map
+
+
+def _create_annotated_reference_image(
+    image_path: str,
+    mask_path: str,
+    compress: bool = True,
+    quality: int = 85,
+    max_size: Optional[tuple[int, int]] = None,
+    box_color: tuple[int, int, int] = (255, 0, 0),  # Red
+    box_width: int = 3,
+) -> Optional[bytes]:
+    """
+    Create an annotated reference image by drawing bounding boxes around defect regions.
+    
+    Args:
+        image_path: Path to the original defect image
+        mask_path: Path to the mask image
+        compress: Whether to compress the output
+        quality: JPEG compression quality
+        max_size: Maximum size for resizing
+        box_color: RGB color for the bounding box (default: red)
+        box_width: Width of the bounding box line
+        
+    Returns:
+        Annotated image bytes or None if failed
+    """
+    try:
+        # Open both image and mask
+        with Image.open(image_path) as img, Image.open(mask_path) as mask:
+            # Convert image to RGB
+            if img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None)
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+            
+            # Resize if needed
+            if max_size is not None:
+                original_size = img.size
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                # Resize mask proportionally
+                if img.size != original_size:
+                    mask = mask.resize(img.size, Image.Resampling.LANCZOS)
+            
+            # Convert mask to numpy array for processing
+            mask_array = np.array(mask.convert("L"))
+            
+            # Find contours/bounding boxes from mask
+            # Use connected components to find defect regions
+            binary_mask = (mask_array > 128).astype(np.uint8)
+            
+            # Find all non-zero regions
+            from scipy import ndimage
+            labeled_array, num_features = ndimage.label(binary_mask)
+            
+            # Create drawing context
+            draw = ImageDraw.Draw(img)
+            
+            # Draw bounding box for each defect region
+            for label_id in range(1, num_features + 1):
+                # Find pixels belonging to this region
+                region_mask = (labeled_array == label_id)
+                rows, cols = np.where(region_mask)
+                
+                if len(rows) > 0 and len(cols) > 0:
+                    # Calculate bounding box
+                    y_min, y_max = rows.min(), rows.max()
+                    x_min, x_max = cols.min(), cols.max()
+                    
+                    # Draw rectangle
+                    draw.rectangle(
+                        [(x_min, y_min), (x_max, y_max)],
+                        outline=box_color,
+                        width=box_width
+                    )
+            
+            # Save to bytes
+            buffer = BytesIO()
+            if compress:
+                img.save(buffer, format="JPEG", quality=quality, optimize=True)
+            else:
+                img.save(buffer, format="PNG")
+            
+            return buffer.getvalue()
+            
+    except Exception as e:
+        log.warning(f"Failed to create annotated reference image from {image_path} and {mask_path}: {e}")
+        return None
 
 
 def _reward_model_value(item: dict[str, Any]) -> Any:
@@ -272,10 +366,10 @@ def convert(
     if limit is not None and limit > 0:
         items = items[:limit]
 
-    # Build good image map for all classes
-    log.info("Building good image map for all classes...")
-    good_image_map = _build_good_image_map(items, dataset_root)
-    log.info(f"Found good images for {len(good_image_map)} classes")
+    # Build defect reference image map for all classes
+    log.info("Building defect reference image map for all classes...")
+    defect_reference_map = _build_defect_reference_map(items, dataset_root)
+    log.info(f"Found defect reference images for {len(defect_reference_map)} classes")
 
     write_index = 0
     for idx, item in enumerate(items):
@@ -307,20 +401,23 @@ def convert(
                 if mask_bytes is None:
                     log.warning(f"[{idx}] Failed to read mask image: {mask_path}")
 
-        # Get good reference image for this class
+        # Get annotated defect reference image for this class
         clsname = item.get("clsname")
-        good_image_bytes = None
-        if clsname and clsname in good_image_map:
-            good_img_path = good_image_map[clsname]
+        annotated_reference_bytes = None
+        if clsname and clsname in defect_reference_map:
+            defect_img_path, defect_mask_path = defect_reference_map[clsname]
             try:
-                good_image_bytes = _read_image_bytes(
-                    good_img_path,
+                annotated_reference_bytes = _create_annotated_reference_image(
+                    defect_img_path,
+                    defect_mask_path,
                     compress=compress_images,
                     quality=image_quality,
                     max_size=max_image_size,
                 )
+                if annotated_reference_bytes is None:
+                    log.warning(f"[{idx}] Failed to create annotated reference image for class '{clsname}'")
             except Exception as e:
-                log.warning(f"[{idx}] Failed to read good reference image {good_img_path}: {e}")
+                log.warning(f"[{idx}] Failed to create annotated reference image {defect_img_path}: {e}")
 
         # Get random instruction prompt for data diversity
         selected_instruction_prompt, prompt_index = get_random_instruction_prompt()
@@ -347,9 +444,9 @@ def convert(
         if mask_bytes is not None:
             extra_info["mask_image"] = mask_bytes
 
-        # Add good reference image to extra_info if available
-        if good_image_bytes is not None:
-            extra_info["good_reference_image"] = good_image_bytes
+        # Add annotated defect reference image to extra_info if available
+        if annotated_reference_bytes is not None:
+            extra_info["reference_image"] = annotated_reference_bytes
 
         record = Record(
             data_source="vstar",
@@ -402,13 +499,13 @@ def convert(
                     images_serialized.append({"bytes": base64.b64encode(b).decode("ascii")})
                 row_dict["images"] = images_serialized
                 
-                # Serialize mask_image and good_reference_image in extra_info if present
+                # Serialize mask_image and reference_image in extra_info if present
                 if "extra_info" in row_dict:
                     extra_info = row_dict["extra_info"]
                     if "mask_image" in extra_info and isinstance(extra_info["mask_image"], bytes):
                         extra_info["mask_image"] = base64.b64encode(extra_info["mask_image"]).decode("ascii")
-                    if "good_reference_image" in extra_info and isinstance(extra_info["good_reference_image"], bytes):
-                        extra_info["good_reference_image"] = base64.b64encode(extra_info["good_reference_image"]).decode("ascii")
+                    if "reference_image" in extra_info and isinstance(extra_info["reference_image"], bytes):
+                        extra_info["reference_image"] = base64.b64encode(extra_info["reference_image"]).decode("ascii")
                 
                 f.write(json.dumps(row_dict, ensure_ascii=False) + "\n")
         log.info(

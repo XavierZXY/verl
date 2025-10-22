@@ -28,10 +28,11 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
 class ImageReferenceTool(BaseTool):
-    """A tool for retrieving the good reference image for quality comparison.
+    """A tool for retrieving the reference image for quality comparison.
 
-    This tool provides access to a defect-free reference image of the same class,
+    This tool provides access to a reference image of the same class,
     which can be used for comparison during quality control inspection.
+    The reference image can be either defect-free or annotated with defect markers.
 
     Methods:
         get_openai_tool_schema: Return the tool schema in OpenAI format
@@ -83,8 +84,8 @@ class ImageReferenceTool(BaseTool):
         Args:
             instance_id: An optional unique identifier for the instance. If not
                 provided, a new UUID will be generated.
-            **kwargs: Should contain 'good_reference_image' key with image bytes data,
-                or 'create_kwargs' containing {'good_reference_image': image_bytes}.
+            **kwargs: Should contain 'reference_image' key with image bytes data,
+                or 'create_kwargs' containing {'reference_image': image_bytes}.
                 The image bytes should be in a format that PIL can read (JPEG, PNG, etc.)
 
         Returns:
@@ -98,11 +99,11 @@ class ImageReferenceTool(BaseTool):
         if create_kwargs:
             kwargs.update(create_kwargs)
 
-        # Get good reference image from kwargs
-        good_reference_image_bytes = kwargs.get("good_reference_image")
+        # Get reference image from kwargs
+        reference_image_bytes = kwargs.get("reference_image")
         
-        if good_reference_image_bytes is None:
-            logger.warning(f"No good_reference_image provided for instance {instance_id}")
+        if reference_image_bytes is None:
+            logger.warning(f"No reference_image provided for instance {instance_id}")
             # Store None to indicate no reference image available
             self._instance_dict[instance_id] = {
                 "reference_image": None,
@@ -112,10 +113,10 @@ class ImageReferenceTool(BaseTool):
 
         # Load the reference image from bytes
         try:
-            if isinstance(good_reference_image_bytes, bytes):
-                reference_img = Image.open(io.BytesIO(good_reference_image_bytes))
+            if isinstance(reference_image_bytes, bytes):
+                reference_img = Image.open(io.BytesIO(reference_image_bytes))
             else:
-                logger.error(f"Invalid good_reference_image type: {type(good_reference_image_bytes)}")
+                logger.error(f"Invalid reference_image type: {type(reference_image_bytes)}")
                 self._instance_dict[instance_id] = {
                     "reference_image": None,
                     "available": False,
@@ -196,7 +197,7 @@ class ImageReferenceTool(BaseTool):
             )
 
         # Construct response text
-        response_text = "Here is a defect-free reference image of the same object class for comparison."
+        response_text = "Here is a reference image of the same object class for comparison."
         if reason:
             response_text = f"Retrieved reference image for: {reason}"
 
