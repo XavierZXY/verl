@@ -524,7 +524,7 @@ class ValidationGenerationsLogger:
             
             # If conversation_history is available (training rollout), use it
             if conversation_history:
-                print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
+                # print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
                 for turn_num, turn_data in enumerate(conversation_history):
                     role = turn_data.get("role", "unknown")
                     content = turn_data.get("content", "")
@@ -549,13 +549,14 @@ class ValidationGenerationsLogger:
                     # Process original image
                     original_image_obj = None
                     if role == "tool" and original_image is not None:
-                        print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
-                              f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
+                        pass
+                        # print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
+                        #       f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
                         try:
                             original_image_obj = wandb.Image(original_image, caption=f"Original - {tool_name}")
-                            print(f"[DEBUG] Successfully converted original_image to wandb.Image")
+                            # print(f"[DEBUG] Successfully converted original_image to wandb.Image")
                         except Exception as e:
-                            print(f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}")
+                            # print(f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}")
                             import traceback
                             traceback.print_exc()
                     

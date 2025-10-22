@@ -197,9 +197,15 @@ class ImageReferenceTool(BaseTool):
             )
 
         # Construct response text
-        response_text = "Here is a reference image of the same object class for comparison."
+        # response_text = "Here is a reference image of the same object class for comparison."
+        
         if reason:
             response_text = f"Retrieved reference image for: {reason}"
+        # for bad reference image, we need to add a note that the reference image is a bad reference image
+        response_text = (
+            "Here is a reference image of the same object class for comparison.The defect is marked in red rectangle."
+            " You should pay attention to the defect. Learn the defect patterns."
+        )
 
         return (
             ToolResponse(
