@@ -977,18 +977,20 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # because we don't have image dimensions. This is acceptable since
                 # bbox-based IoU is mainly for good samples where bbox accuracy is less critical.
                 
-                gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
-                bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
-                if gt_boxes:
-                    logger.debug(f"Using bbox-based IoU with {len(gt_boxes)} GT boxes: {bbox_iou:.4f}")
-                else:
-                    logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
+                # gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
+                # bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
+                # if gt_boxes:
+                #     logger.debug(f"Using bbox-based IoU with {len(gt_boxes)} GT boxes: {bbox_iou:.4f}")
+                # else:
+                #     logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
+                # for no mask image, base reward for use zoom tool
+                bbox_iou = 0.001
     
     # Part 3: Tool diversity bonus
     # Give extra reward if both tools were used
     tool_diversity_bonus = 0.0
     if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
-        tool_diversity_bonus = 1.0
+        tool_diversity_bonus = 0.2
         logger.debug("Tool diversity bonus: both zoom and reference tools used")
     
     # Apply sqrt transformation to amplify small IoU differences
@@ -996,11 +998,11 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (sqrt)")
     
     # Combined tool reward
-    tool_reward = tool_usage_reward + 4 * bbox_iou_transformed + tool_diversity_bonus
+    tool_reward = tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
-    final_score = 0.3 * format_reward + 0.7 * acc_reward + 0.4 * tool_reward
+    final_score = 0.3 * format_reward +  acc_reward + 0.4 * tool_reward
     
     # Log for debugging
     logger.debug(

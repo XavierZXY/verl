@@ -26,9 +26,9 @@ REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=5
-BATCH_SIZE=64
-PPO_BATCH_SIZE=64
-MICRO_BATCH_SIZE=8
+BATCH_SIZE=32
+PPO_BATCH_SIZE=32
+MICRO_BATCH_SIZE=4
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=16
 ROLLOUT_PARALLELISM=1
@@ -36,10 +36,10 @@ ROLLOUT_UTIL=0.5
 N_GPUS_PER_NODE=8
 N_ROLLOUT=16
 GRAD_CLIP=1
-SAVE_FREQ=10
-TEST_FREQ=4
+SAVE_FREQ=20
+TEST_FREQ=5
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Mi325-bbox-penality-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Mi325-addnormiou-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=machine_idle        # 任务名称
-#SBATCH --partition=AIG_Models         # 分区名称
-#SBATCH --nodelist=tw036               # 指定节点
+#SBATCH --partition=Silo_Customer_Engineering         # 分区名称
+#SBATCH --nodelist=tw029               # 指定节点
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8                   # GPU数量
@@ -20,6 +20,8 @@ echo "执行节点 (Execution Node): $(hostname)"
 echo "提交目录 (Submission Directory): $SLURM_SUBMIT_DIR"
 echo "开始时间 (Start Time): $(date)"
 echo "=========================================================="
+
+sleep 36000
 
 # 设置容器名称
 CONTAINER_NAME="vllm-deep-idle"
