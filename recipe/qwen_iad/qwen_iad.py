@@ -979,7 +979,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # Use mask-based IoU (more accurate for defective samples)
                 # NOTE: _compute_mask_iou applies _maybe_resize_bbox to match the actual
                 # bbox used by ImageZoomInTool, ensuring consistency in IoU calculation
-                bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3)
+                bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3) + 0.001
                 logger.debug(f"Using mask-based IoU: {bbox_iou:.4f}")
             else:
                 # Fallback to bbox-based IoU
@@ -1015,7 +1015,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     tool_reward = 5 * bbox_iou_transformed + tool_diversity_bonus
     
     # Final score calculation
-    # Weighted combination: format (0.5), acc (0.5), tool (1.0)
+    # Weighted combination: format (0.5), acc (1.0), tool (0-5.1)
     final_score = 0.3 * format_reward +  acc_reward +  tool_reward
     
     # Log for debugging
