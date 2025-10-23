@@ -1003,7 +1003,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Give extra reward if both tools were used
     tool_diversity_bonus = 0.0
     if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
-        tool_diversity_bonus = 0.2
+        tool_diversity_bonus = 0.1
         logger.debug("Tool diversity bonus: both zoom and reference tools used")
     
     # Apply sqrt transformation to amplify small IoU differences
@@ -1011,11 +1011,12 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (sqrt)")
     
     # Combined tool reward
-    tool_reward = tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus
+    # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus
+    tool_reward = 2 * bbox_iou_transformed + tool_diversity_bonus
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
-    final_score = 0.3 * format_reward +  acc_reward + 0.4 * tool_reward
+    final_score = 0.3 * format_reward +  acc_reward +  tool_reward
     
     # Log for debugging
     logger.debug(
