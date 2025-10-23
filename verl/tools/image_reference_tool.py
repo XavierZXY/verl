@@ -196,9 +196,12 @@ class ImageReferenceTool(BaseTool):
             )
 
         # Construct response text
-        response_text = "Here is a defect-free reference image of the same object class for comparison."
         if reason:
             response_text = f"Retrieved reference image for: {reason}"
+        response_text = (
+            "Here is a defect-free reference image of the same object class for comparison."
+            "You can use this reference image to help you analyze the defect."
+            )
 
         return (
             ToolResponse(

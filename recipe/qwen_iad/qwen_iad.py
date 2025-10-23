@@ -633,7 +633,7 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
         size_penalty = 1.0
         if gt_area > 0:
             area_ratio = pred_area / gt_area
-            if area_ratio > 8.0:  # Prediction area is 3x larger than GT
+            if area_ratio > 20.0:  # Prediction area is 20x larger than GT
                 import math
                 size_penalty = 1.0 / (1.0 + math.log(area_ratio / 3.0))
                 logger.debug(f"Size penalty applied: area_ratio={area_ratio:.2f}, penalty={size_penalty:.4f}")
@@ -930,29 +930,42 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
-        # Extract bbox from the last tool_call for IoU calculation (only for zoom tool)
+        # Extract bbox from the last image_zoom_in_tool call for IoU calculation
         pred_boxes = []
         if tool_calls:
-            tool_call_content = tool_calls[-1]
-            try:
-                tool_data = json.loads(tool_call_content.strip())
-                # Extract bbox_2d from arguments
-                if isinstance(tool_data, dict):
-                    args = tool_data.get("arguments", {})
-                    bbox = args.get("bbox_2d") or args.get("bbox2d")
-                    if bbox and isinstance(bbox, list) and len(bbox) == 4:
-                        pred_boxes.append([float(v) for v in bbox])
-                elif isinstance(tool_data, list):
-                    # Handle list format
-                    for item in tool_data:
-                        if isinstance(item, dict):
-                            args = item.get("parameters", {}) or item.get("arguments", {})
+            # Search from the end to find the last image_zoom_in_tool call
+            for tool_call_content in reversed(tool_calls):
+                try:
+                    tool_data = json.loads(tool_call_content.strip())
+                    tool_found = False
+                    
+                    # Extract bbox_2d from arguments if this is image_zoom_in_tool
+                    if isinstance(tool_data, dict):
+                        tool_name = tool_data.get("tool_name") or tool_data.get("name")
+                        if tool_name == "image_zoom_in_tool":
+                            tool_found = True
+                            args = tool_data.get("arguments", {})
                             bbox = args.get("bbox_2d") or args.get("bbox2d")
                             if bbox and isinstance(bbox, list) and len(bbox) == 4:
                                 pred_boxes.append([float(v) for v in bbox])
-                                break  # Only take the first bbox from last tool call
-            except (json.JSONDecodeError, ValueError, TypeError):
-                pass
+                    elif isinstance(tool_data, list):
+                        # Handle list format
+                        for item in tool_data:
+                            if isinstance(item, dict):
+                                tool_name = item.get("tool_name") or item.get("name")
+                                if tool_name == "image_zoom_in_tool":
+                                    tool_found = True
+                                    args = item.get("parameters", {}) or item.get("arguments", {})
+                                    bbox = args.get("bbox_2d") or args.get("bbox2d")
+                                    if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                                        pred_boxes.append([float(v) for v in bbox])
+                                        break  # Only take the first bbox from this tool call
+                    
+                    # If we found image_zoom_in_tool, stop searching
+                    if tool_found:
+                        break
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    continue
         
         if pred_boxes:
             # Check if mask image is available in extra_info (only exists for defective samples)
@@ -1044,7 +1057,7 @@ assistant
 Zoomed in on the image to the region [588, 657, 613, 667] with label metal terminal.
 </tool_response>
 assistant
-<think>By zooming in,我 observed that the protrusion was likely a shadow cast from the component housing rather than an actual defect in the terminal. Considering the typical manufacturing techniques and the orientation of the light within the image, the shadowing can be attributed to normal lighting conditions rather than a defect in the terminal itself.</think>
+<think>By zooming in,I observed that the protrusion was likely a shadow cast from the component housing rather than an actual defect in the terminal. Considering the typical manufacturing techniques and the orientation of the light within the image, the shadowing can be attributed to normal lighting conditions rather than a defect in the terminal itself.</think>
 <loc>[{"bbox_2d": [598, 680, 272, 692]},{"bbox_2d": [598, 776, 272, 788]}]</loc>
 <type>metal terminal</type>
 <answer>no</answer>"""
