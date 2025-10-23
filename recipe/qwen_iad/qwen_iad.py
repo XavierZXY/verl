@@ -1012,7 +1012,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     
     # Combined tool reward
     # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus
-    tool_reward = 2 * bbox_iou_transformed + tool_diversity_bonus
+    tool_reward = 5 * bbox_iou_transformed + tool_diversity_bonus
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
