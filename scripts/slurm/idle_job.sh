@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=machine_idle        # 任务名称
 #SBATCH --partition=Silo_Customer_Engineering         # 分区名称
-#SBATCH --nodelist=tw029               # 指定节点
+#SBATCH --nodelist=tw008               # 指定节点
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8                   # GPU数量
@@ -10,6 +10,7 @@
 #SBATCH --time=8:00:00                # 任务超时时间，设置为24小时
 #SBATCH --output=log/idle_%j.out       # 输出日志文件
 #SBATCH --error=log/idle_%j.err        # 错误日志文件
+# Silo_Customer_Engineering,AIG_Models
 
 # 打印任务信息
 echo "=========================================================="

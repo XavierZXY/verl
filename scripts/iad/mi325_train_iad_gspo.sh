@@ -2,27 +2,27 @@
 
 set -x
 export VLLM_USE_V1=1
-# export VERL_LOGGING_LEVEL=DEBUG
+# export VERL_LOGGING_LEVEL=INFO
 export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
 PROJECT_NAME="iad-tool"
 
-BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
-SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
+BASEDIR=/wekafs/takisobe/zxy/codes/verl
+SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
 # DATASET_TRAIN=${BASEDIR}/data/train.parquet
 # DATASET_VAL=${BASEDIR}/data/val.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-# DATASET_VAL=/home/takisobe@amd.com/zxy/data/deepeyes/output_first_300.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/train/train.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/good/compare_output.parquet
-# DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/train/train_enhanced.parquet
-# DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/test/test.parquet
+# DATASET_TRAIN=/wekafs/takisobe/zxy/data/deepeyes/output_first_300.parquet
+# DATASET_VAL=/wekafs/takisobe/zxy/data/deepeyes/output_first_300.parquet
+# DATASET_TRAIN=/wekafs/takisobe/zxy/codes/verl/data/visa-2k/train/train.parquet
+# DATASET_TRAIN=/wekafs/takisobe/zxy/codes/verl/data/mvtec/good/compare_output.parquet
+# DATASET_TRAIN=/wekafs/takisobe/zxy/codes/verl/data/mvtec/train/train_enhanced.parquet
+# DATASET_VAL=/wekafs/takisobe/zxy/codes/verl/data/visa-2k/test/test.parquet
 # debug for new data
-DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/moredata/train.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/moredata/test.parquet
-REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
+DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
+DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/test/test.parquet
+REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=5
@@ -32,14 +32,14 @@ MICRO_BATCH_SIZE=4
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.4
+ROLLOUT_UTIL=0.5
 N_GPUS_PER_NODE=8
-N_ROLLOUT=16
+N_ROLLOUT=8
 GRAD_CLIP=1
 SAVE_FREQ=20
 TEST_FREQ=5
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="NewPrompt-gspo-debug--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Multizoom--gspo-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -60,11 +60,11 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.optim.lr=${LR} \
     actor_rollout_ref.actor.ppo_mini_batch_size=${PPO_BATCH_SIZE} \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=${MICRO_BATCH_SIZE} \
-    actor_rollout_ref.actor.policy_loss.loss_mode=gspo \
     actor_rollout_ref.actor.use_kl_loss=False \
     actor_rollout_ref.actor.kl_loss_coef=0.0 \
     actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.actor.entropy_coeff=0.0 \
+    actor_rollout_ref.actor.policy_loss.loss_mode=gspo \
     actor_rollout_ref.actor.grad_clip=${GRAD_CLIP} \
     actor_rollout_ref.actor.checkpoint.save_contents=['model','hf_model','optimizer','extra'] \
     actor_rollout_ref.actor.ulysses_sequence_parallel_size=1 \

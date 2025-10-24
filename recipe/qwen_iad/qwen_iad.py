@@ -25,70 +25,10 @@ from PIL import Image
 import verl.utils.torch_functional as verl_F
 from verl.utils.dataset.rl_dataset import RLHFDataset
 from verl.utils.model import compute_position_id_with_mask
-
+from recipe.qwen_iad.qwen_iad_improved_prompt import IAD_SYSTEM_PROMPT
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT: str = (
-    "You are a highly precise and meticulous quality control inspector. Your mission is to analyze images for defects based on visual evidence.\n"
-    "Your response must follow one of the three formats below, depending on your assessment.\n"
-    "---\n"
-    "### Available Tools\n"
-    "You have access to the following tools to assist your inspection:\n"
-    "1. **image_zoom_in_tool**: Zoom in on a specific region of the current image by providing a bounding box [x1, y1, x2, y2].\n"
-    "2. **image_reference_tool**: Retrieve a defect-free reference image of the same object class for comparison purposes.\n"
-    "---\n"
-    "### Format 1: Use When You Need to Use a Tool\n"
-    "If you cannot confidently identify or locate a defect and require a closer view, or need to compare with a reference image, you can use the available tools to get more information. "
-    "Your response **MUST ONLY** contain these two tags:\n"
-    "1.  **`<think></think>`**: Explain why you need to use a tool. For example, describe what you see and why it's ambiguous "
-    '(e.g., "I see a potential anomaly in the lower-right corner, but the resolution is too low to confirm if it\'s a crack or a shadow. '
-    'I will use the zoom tool to inspect it." or "I need to see a reference image to verify if this marking is normal for this object class.").\n'
-    "2.  **`<tool_call></tool_call>`**: Provide the tool call needed to get more information.\n"
-    "** Example of a Tool Request Turn (Zoom):**\n"
-    "<think>I observe a faint, dark spot on the main body of the component. It is unclear if this is a surface hole or a smudge. "
-    "I need to zoom in to determine its nature and precise boundaries.</think>\n"
-    "<tool_call>\n"
-    '[{"tool_name": "image_zoom_in_tool", "parameters": {"bbox_2d": [250, 300, 300, 350]}}]\n'
-    "</tool_call>\n"
-    "** Example of a Tool Request Turn (Reference):**\n"
-    "<think>I notice some texture variations on the surface. To determine if this is a defect or normal surface pattern, "
-    "I need to compare it with a defect-free reference image.</think>\n"
-    "<tool_call>\n"
-    '[{"tool_name": "image_reference_tool", "parameters": {"reason": "to compare surface texture patterns"}}]\n'
-    "</tool_call>\n"
-    "---\n"
-    "### Format 2: Use When You Have Found a Defect\n"
-    "Use this format to provide your final conclusion when you have confidently identified one or more defects "
-    "(either initially or after using a tool). Your response MUST NOT contain `<tool_call>`.\n"
-    "1.  **`<think></think>`**: Provide your final step-by-step reasoning. If you previously used a tool, explain how the tool's output "
-    'helped you make the final decision (e.g., "After zooming in, the spot is clearly a small, pitted hole in the surface.").\n'
-    "2.  **`<location></location>`**: Provide a JSON list of all detected defect locations (defect only, not the whole object).\n"
-    '    - Must use "bbox2d" key with [x_min, y_min, x_max, y_max] coordinates.\n'
-    "    - Maximum of 3 bounding boxes. You should always remember this rule.\n"
-    '    - Example: [{"bbox2d": [100, 150, 200, 250]}]\n'
-    "3.  **`<type></type>`**: Specify the defect type from the list: \"crack\", \"discoloration\", \"scratch\", \"hole\", \"surface\", \"other\". "
-    'Use "unspecified" if uncertain.\n'
-    '4.  **`<answer></answer>`**: Conclude with "yes".\n'
-    "** Example of a Final \"Defect Found\" Turn (after a tool was used):**\n"
-    "<think>The zoomed-in view from the tool confirms that the dark spot is a well-defined circular hole, not a smudge. "
-    "I can now confidently mark its location and type.</think>\n"
-    '[{"bbox2d": [265, 310, 280, 325]}]\n'
-    "<type>hole</type>\n"
-    "<answer>yes</answer>\n"
-    "---\n"
-    "### Format 3: Use When You Have Found NO Defects\n"
-    "Use this format when you are confident the item is free of defects.\n"
-    "1.  **`<think></think>`**: Explain why you believe the object is defect-free. Describe the normal and healthy features you observed.\n"
-    "2.  **`<location></location>`**: Provide an empty JSON list: [].\n"
-    '3.  **`<type></type>`**: Use the value "good".\n'
-    '4.  **`<answer></answer>`**: Conclude with "no".\n'
-    "** Example of a \"No Defect\" Turn:**\n"
-    "<think>I have thoroughly scanned the entire surface. The finish is uniform, and there are no signs of cracks, scratches, "
-    "or any other anomalies. The object meets quality standards.</think>\n"
-    "<location>[]</location>\n"
-    "<type>good</type>\n"
-    "<answer>no</answer>\n"
-)
+SYSTEM_PROMPT: str = IAD_SYSTEM_PROMPT
 openai_api_key = "EMPTY"
 openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
 
@@ -227,9 +167,15 @@ class CustomRLHFDataset(RLHFDataset):
         # Get good reference image from extra_info if available
         good_reference_image = row_dict.get("extra_info", {}).get("good_reference_image")
         
+        # Get mask image from extra_info if available (for defect detection)
+        mask_image = row_dict.get("extra_info", {}).get("mask_image")
+        
         tools_kwargs = {
             "image_zoom_in_tool": {
-                "create_kwargs": {"image": images[0]},
+                "create_kwargs": {
+                    "image": images[0],
+                    "mask_image": mask_image,  # Pass mask image for synchronized cropping
+                },
                 # "execute_kwargs": {},
                 # "calc_reward_kwargs": {},
                 # "release_kwargs": {},
@@ -245,179 +191,6 @@ class CustomRLHFDataset(RLHFDataset):
         row_dict["tools_kwargs"] = tools_kwargs
         row_dict["agent_name"] = "tool_agent"
         return row_dict
-
-
-def extract_answer(text):
-    """Extract content from <answer></answer> tags."""
-    pattern = r"<answer>(.*?)</answer>"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def extract_location(text):
-    """Extract content from <location></location> tags."""
-    pattern = r"<location>(.*?)</location>"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def extract_type(text):
-    """Extract content from <type></type> tags."""
-    pattern = r"<type>(.*?)</type>"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    return None
-
-
-def _parse_predicted_bboxes(location_text):
-    """Parse predicted bboxes from location JSON string into list of [x1,y1,x2,y2]."""
-    if not location_text:
-        return []
-
-    import json
-
-    # Try strict JSON first
-    try:
-        loc = json.loads(location_text)
-    except Exception:
-        # Try Python-literal style (single quotes, None, etc.)
-        try:
-            import ast
-
-            loc = ast.literal_eval(location_text)
-        except Exception:
-            loc = None
-
-    boxes = []
-    if isinstance(loc, list):
-        for item in loc:
-            if isinstance(item, dict):
-                arr = item.get("bbox2d") or item.get("bbox_2d")
-                if isinstance(arr, (list | tuple)) and len(arr) == 4:
-                    try:
-                        boxes.append([float(v) for v in arr])
-                    except Exception:
-                        continue
-
-    if boxes:
-        return boxes
-
-    # Regex fallback: extract any [x1,y1,x2,y2]
-    try:
-        pattern = r"\[\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*,\s*([-+]?[0-9]*\.?[0-9]+)\s*\]"
-        matches = re.findall(pattern, location_text)
-        for m in matches:
-            vals = [float(x) for x in m]
-            if len(vals) == 4:
-                boxes.append(vals)
-        return boxes
-    except Exception as e:
-        logger.error(f"Failed to parse predicted bboxes: {e}")
-        return []
-
-
-def _extract_gt_bboxes(ground_truth, extra_info):
-    """Extract ground truth bboxes list[[x1,y1,x2,y2]]."""
-    boxes = []
-    # Prefer ground_truth dict
-    try:
-        if isinstance(ground_truth, dict) and "bboxes" in ground_truth:
-            gt_boxes = ground_truth["bboxes"]
-            try:
-                iterable = list(gt_boxes)
-            except Exception:
-                iterable = []
-            if iterable:
-                for item in iterable:
-                    if isinstance(item, dict):
-                        arr = item.get("bbox2d") or item.get("bbox_2d")
-                        if isinstance(arr, list) and len(arr) == 4:
-                            boxes.append([float(v) for v in arr])
-        # Fallback to extra_info
-        if not boxes and extra_info and "bboxes" in extra_info:
-            gt_boxes = extra_info["bboxes"]
-            try:
-                iterable = list(gt_boxes)
-            except Exception:
-                iterable = []
-            if iterable:
-                for item in iterable:
-                    if isinstance(item, dict):
-                        arr = item.get("bbox2d") or item.get("bbox_2d")
-                        if isinstance(arr, list) and len(arr) == 4:
-                            boxes.append([float(v) for v in arr])
-    except Exception as e:
-        logger.error(f"Failed to extract GT bboxes: {e}")
-    return boxes
-
-
-def _bbox_iou_xyxy(box_a, box_b):
-    """Compute IoU between two bboxes in xyxy format."""
-    x1 = max(box_a[0], box_b[0])
-    y1 = max(box_a[1], box_b[1])
-    x2 = min(box_a[2], box_b[2])
-    y2 = min(box_a[3], box_b[3])
-    inter_w = max(0.0, x2 - x1)
-    inter_h = max(0.0, y2 - y1)
-    inter = inter_w * inter_h
-    area_a = max(0.0, box_a[2] - box_a[0]) * max(0.0, box_a[3] - box_a[1])
-    area_b = max(0.0, box_b[2] - box_b[0]) * max(0.0, box_b[3] - box_b[1])
-    union = area_a + area_b - inter
-    return inter / union if union > 0 else 0.0
-
-
-def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
-    """
-    IoU-based reward calculation focusing on precision (how accurate predictions are).
-    Returns the average IoU of predicted boxes matched to ground truth boxes.
-    """
-    # Limit predicted boxes to avoid excessive outputs
-    if len(pred_boxes) > max_pred_boxes:
-        pred_boxes = pred_boxes[:max_pred_boxes]
-
-    # Empty cases
-    if len(gt_boxes) == 0 and len(pred_boxes) == 0:
-        return 1.0
-    if len(gt_boxes) == 0 and len(pred_boxes) > 0:
-        # Penalty for false positive detections
-        return 0.0
-    if len(gt_boxes) > 0 and len(pred_boxes) == 0:
-        # Penalty for missing detections
-        return 0.0
-
-    # Compute proper IoU with intersection/union formula
-    def compute_proper_iou(box1, box2):
-        """Compute IoU = intersection / union"""
-        x1_inter = max(box1[0], box2[0])
-        y1_inter = max(box1[1], box2[1])
-        x2_inter = min(box1[2], box2[2])
-        y2_inter = min(box1[3], box2[3])
-
-        inter_area = max(0.0, x2_inter - x1_inter) * max(0.0, y2_inter - y1_inter)
-
-        area1 = max(0.0, box1[2] - box1[0]) * max(0.0, box1[3] - box1[1])
-        area2 = max(0.0, box2[2] - box2[0]) * max(0.0, box2[3] - box2[1])
-        union_area = area1 + area2 - inter_area
-
-        return inter_area / union_area if union_area > 0 else 0.0
-
-    # Compute best matching IoU for each predicted box (precision metric)
-    pred_ious = []
-    for pred_box in pred_boxes:
-        best_iou = 0.0
-        for gt_box in gt_boxes:
-            iou = compute_proper_iou(pred_box, gt_box)
-            best_iou = max(best_iou, iou)
-        pred_ious.append(best_iou)
-
-    # Return average IoU directly (precision: how accurate are the predictions)
-    precision = sum(pred_ious) / len(pred_ious) if pred_ious else 0.0
-    return precision
 
 
 def _validate_bbox(left, top, right, bottom):
@@ -542,6 +315,135 @@ def _maybe_resize_bbox(bbox_2d, image_width, image_height, min_dimension=28):
     return current_bbox
 
 
+def _extract_zoom_bbox_sequence(solution_str):
+    """
+    Extract all image_zoom_in_tool bbox calls in chronological order.
+    
+    This is used to compute coordinate transformations when multiple zoom calls are made.
+    
+    Args:
+        solution_str: The model's solution string
+        
+    Returns:
+        List of bbox coordinates [x1, y1, x2, y2] in chronological order
+    """
+    import json
+    
+    tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
+    tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
+    
+    zoom_bboxes = []
+    for tool_call_content in tool_calls:
+        try:
+            tool_data = json.loads(tool_call_content.strip())
+            
+            # Handle both list and dict formats
+            if isinstance(tool_data, dict):
+                tool_name = tool_data.get("tool_name") or tool_data.get("name")
+                if tool_name == "image_zoom_in_tool":
+                    args = tool_data.get("parameters", {}) or tool_data.get("arguments", {})
+                    bbox = args.get("bbox_2d") or args.get("bbox2d")
+                    if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                        zoom_bboxes.append([float(v) for v in bbox])
+            elif isinstance(tool_data, list):
+                for item in tool_data:
+                    if isinstance(item, dict):
+                        tool_name = item.get("tool_name") or item.get("name")
+                        if tool_name == "image_zoom_in_tool":
+                            args = item.get("parameters", {}) or item.get("arguments", {})
+                            bbox = args.get("bbox_2d") or args.get("bbox2d")
+                            if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                                zoom_bboxes.append([float(v) for v in bbox])
+        except (json.JSONDecodeError, ValueError, TypeError):
+            continue
+    
+    return zoom_bboxes
+
+
+def _transform_bbox_to_original_coords(bbox_sequence, image_width, image_height):
+    """
+    Transform a sequence of bbox coordinates through multiple zoom operations back to original coordinates.
+    
+    When zoom tool is called multiple times, each subsequent bbox is in the coordinate system
+    of the previous crop. This function transforms the final bbox back to the original image coordinates.
+    
+    Args:
+        bbox_sequence: List of bboxes [x1, y1, x2, y2], where each bbox may be in different coord systems
+        image_width: Original image width
+        image_height: Original image height
+        
+    Returns:
+        The final bbox transformed to original image coordinates, or None if transformation fails
+    """
+    if not bbox_sequence:
+        return None
+    
+    if len(bbox_sequence) == 1:
+        # Only one zoom, bbox is already in original coordinates
+        return bbox_sequence[0]
+    
+    # Multiple zooms: need to transform coordinates
+    # Each bbox (except the first) is relative to the previous crop
+    try:
+        # Start with the first bbox (in original coordinates)
+        current_bbox = list(bbox_sequence[0])
+        
+        # Apply the resize logic to match what the tool actually uses
+        resized_bbox = _maybe_resize_bbox(current_bbox, image_width, image_height)
+        if resized_bbox is None:
+            logger.warning(f"First bbox {current_bbox} failed validation")
+            return None
+        
+        # The crop region becomes the new coordinate system
+        crop_offset_x = resized_bbox[0]
+        crop_offset_y = resized_bbox[1]
+        crop_width = resized_bbox[2] - resized_bbox[0]
+        crop_height = resized_bbox[3] - resized_bbox[1]
+        
+        # For each subsequent bbox, transform it to original coordinates
+        for i in range(1, len(bbox_sequence)):
+            next_bbox = bbox_sequence[i]
+            
+            # This bbox is in the coordinate system of the previous crop
+            # Transform to original coordinates by adding the cumulative offset
+            transformed_bbox = [
+                crop_offset_x + next_bbox[0],
+                crop_offset_y + next_bbox[1],
+                crop_offset_x + next_bbox[2],
+                crop_offset_y + next_bbox[3],
+            ]
+            
+            # Apply resize logic in the current crop's coordinate system
+            resized_in_crop = _maybe_resize_bbox(next_bbox, crop_width, crop_height)
+            if resized_in_crop is None:
+                logger.warning(f"Bbox {next_bbox} at position {i} failed validation in crop space")
+                return None
+            
+            # Transform the resized bbox to original coordinates
+            final_bbox = [
+                crop_offset_x + resized_in_crop[0],
+                crop_offset_y + resized_in_crop[1],
+                crop_offset_x + resized_in_crop[2],
+                crop_offset_y + resized_in_crop[3],
+            ]
+            
+            # Update for next iteration if there are more zooms
+            if i < len(bbox_sequence) - 1:
+                crop_offset_x = final_bbox[0]
+                crop_offset_y = final_bbox[1]
+                crop_width = final_bbox[2] - final_bbox[0]
+                crop_height = final_bbox[3] - final_bbox[1]
+            
+            current_bbox = final_bbox
+        
+        logger.debug(f"Transformed {len(bbox_sequence)} bboxes: {bbox_sequence[0]} -> ... -> {current_bbox}")
+        return current_bbox
+        
+    except Exception as e:
+        logger.error(f"Failed to transform bbox sequence: {e}")
+        return None
+
+
 def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
     """
     Compute IoU between predicted bboxes and ground truth mask image.
@@ -619,6 +521,7 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
                 pred_mask[y1:y2, x1:x2] = 1
         
         # Compute IoU between prediction mask and ground truth mask
+        # Convert to Python int to ensure JSON serialization compatibility
         intersection = np.logical_and(pred_mask, gt_mask_binary).sum()
         union = np.logical_or(pred_mask, gt_mask_binary).sum()
         if union == 0:
@@ -700,116 +603,6 @@ def _extract_ground_truth_answer(ground_truth, extra_info):
             answer = answer_info
 
     return (answer or "").strip()
-
-
-def _validate_tool_call_json(solution_str):
-    """
-    Validate that tool_call tags contain valid JSON.
-
-    Args:
-        solution_str: The solution string to check
-
-    Returns:
-        bool: True if all tool_call contents are valid JSON (or no tool_calls), False otherwise
-    """
-    import json
-
-    tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
-    tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
-
-    if not tool_calls:
-        return True  # No tool calls is valid
-
-    for tool_call_content in tool_calls:
-        try:
-            json.loads(tool_call_content.strip())
-        except (json.JSONDecodeError, ValueError):
-            return False
-
-    return True
-
-
-def _smooth_format_reward(format_errors_count, total_checks=4):
-    """
-    Compute smooth format reward based on the number of format errors.
-
-    Args:
-        format_errors_count: Number of format errors detected
-        total_checks: Total number of format checks performed
-
-    Returns:
-        float: Smooth format reward in range [-0.5, 0.0]
-    """
-    if format_errors_count == 0:
-        return 0.0
-
-    # Use sigmoid-like function to smooth the penalty
-    error_ratio = format_errors_count / total_checks
-    # Map error ratio to smooth penalty using tanh
-    smooth_penalty = -0.5 * math.tanh(2.0 * error_ratio)
-    return smooth_penalty
-
-
-def _smooth_acc_reward(llm_response, confidence_threshold=0.8):
-    """
-    Compute smooth accuracy reward with confidence consideration.
-
-    Args:
-        llm_response: Response from LLM judge
-        confidence_threshold: Threshold for high confidence
-
-    Returns:
-        float: Smooth accuracy reward in range [0.0, 1.0]
-    """
-    if re.search(r"\bCORRECT\b", llm_response, re.IGNORECASE):
-        # Check for confidence indicators in the response
-        confidence_words = [
-            "definitely",
-            "clearly",
-            "obviously",
-            "certainly",
-            "absolutely",
-        ]
-        uncertainty_words = [
-            "maybe",
-            "possibly",
-            "might",
-            "could",
-            "uncertain",
-            "unclear",
-        ]
-
-        confidence_score = 1.0
-        if any(word in llm_response.lower() for word in uncertainty_words):
-            confidence_score = 0.7
-        elif any(word in llm_response.lower() for word in confidence_words):
-            confidence_score = 1.0
-        else:
-            confidence_score = 0.85  # Default confidence for CORRECT
-
-        return confidence_score
-    elif re.search(r"\bINCORRECT\b", llm_response, re.IGNORECASE):
-        return 0.0
-    else:
-        # Ambiguous response gets low reward
-        return 0.1
-
-
-def _clip_and_normalize_reward(reward, min_val=-1.0, max_val=1.0):
-    """
-    Clip and normalize reward to prevent extreme values.
-
-    Args:
-        reward: Raw reward value
-        min_val: Minimum allowed value
-        max_val: Maximum allowed value
-
-    Returns:
-        float: Clipped and normalized reward
-    """
-    clipped = max(min_val, min(max_val, reward))
-    # Apply tanh for additional smoothing
-    return math.tanh(clipped)
 
 
 def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_info=None) -> float:
@@ -897,22 +690,23 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     else:
         acc_reward = 0.0
     
-    # 3. Tool reward: combination of tool usage, bbox IoU, and tool diversity bonus
+    # 3. Tool reward: combination of tool usage, bbox IoU, zoom call count, and tool diversity bonus
     # Part 1: Check if tools were called and detect tool types
     has_tool_usage = count_tool_call_1 > 0
     tool_usage_reward = 1.0 if has_tool_usage else 0.0
     
     # Part 2: Compute bbox IoU from tool_call parameters or mask image
-    # Also detect which tools were used for diversity bonus
+    # Also detect which tools were used and count zoom tool calls
     bbox_iou = 0.0
     tools_used = set()
+    zoom_call_count = 0
     
     if has_tool_usage:
         # Extract all tool calls
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
         tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
         
-        # Detect all tools used
+        # Detect all tools used and count zoom tool calls
         for tool_call_content in tool_calls:
             try:
                 tool_data = json.loads(tool_call_content.strip())
@@ -923,49 +717,60 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                             tool_name = item.get("tool_name") or item.get("name")
                             if tool_name:
                                 tools_used.add(tool_name)
+                                if tool_name == "image_zoom_in_tool":
+                                    zoom_call_count += 1
                 elif isinstance(tool_data, dict):
                     tool_name = tool_data.get("tool_name") or tool_data.get("name")
                     if tool_name:
                         tools_used.add(tool_name)
+                        if tool_name == "image_zoom_in_tool":
+                            zoom_call_count += 1
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
-        # Extract bbox from the last image_zoom_in_tool call for IoU calculation
+        # Extract all zoom bbox calls for coordinate transformation
+        zoom_bbox_sequence = _extract_zoom_bbox_sequence(solution_str)
+        
         pred_boxes = []
-        if tool_calls:
-            # Search from the end to find the last image_zoom_in_tool call
-            for tool_call_content in reversed(tool_calls):
-                try:
-                    tool_data = json.loads(tool_call_content.strip())
-                    tool_found = False
-                    
-                    # Extract bbox_2d from arguments if this is image_zoom_in_tool
-                    if isinstance(tool_data, dict):
-                        tool_name = tool_data.get("tool_name") or tool_data.get("name")
-                        if tool_name == "image_zoom_in_tool":
-                            tool_found = True
-                            args = tool_data.get("arguments", {})
-                            bbox = args.get("bbox_2d") or args.get("bbox2d")
-                            if bbox and isinstance(bbox, list) and len(bbox) == 4:
-                                pred_boxes.append([float(v) for v in bbox])
-                    elif isinstance(tool_data, list):
-                        # Handle list format
-                        for item in tool_data:
-                            if isinstance(item, dict):
-                                tool_name = item.get("tool_name") or item.get("name")
-                                if tool_name == "image_zoom_in_tool":
-                                    tool_found = True
-                                    args = item.get("parameters", {}) or item.get("arguments", {})
-                                    bbox = args.get("bbox_2d") or args.get("bbox2d")
-                                    if bbox and isinstance(bbox, list) and len(bbox) == 4:
-                                        pred_boxes.append([float(v) for v in bbox])
-                                        break  # Only take the first bbox from this tool call
-                    
-                    # If we found image_zoom_in_tool, stop searching
-                    if tool_found:
-                        break
-                except (json.JSONDecodeError, ValueError, TypeError):
-                    continue
+        if zoom_bbox_sequence:
+            # Try to get image dimensions from extra_info or mask image
+            image_width = None
+            image_height = None
+            
+            if extra_info and isinstance(extra_info, dict):
+                # First try direct width/height from extra_info
+                image_width = extra_info.get("image_width")
+                image_height = extra_info.get("image_height")
+                
+                # If not found, try to extract from mask_image
+                if (image_width is None or image_height is None) and "mask_image" in extra_info:
+                    gt_mask_bytes = extra_info.get("mask_image")
+                    if gt_mask_bytes and isinstance(gt_mask_bytes, bytes):
+                        try:
+                            from io import BytesIO
+                            from PIL import Image as PILImage
+                            mask_img = PILImage.open(BytesIO(gt_mask_bytes))
+                            image_width, image_height = mask_img.size
+                            logger.debug(f"Extracted image dimensions from mask: {image_width}x{image_height}")
+                        except Exception as e:
+                            logger.warning(f"Failed to extract dimensions from mask: {e}")
+            
+            # If we have multiple zoom calls, transform the final bbox to original coordinates
+            if len(zoom_bbox_sequence) > 1 and image_width and image_height:
+                logger.debug(f"Multiple zoom calls detected: {len(zoom_bbox_sequence)}")
+                transformed_bbox = _transform_bbox_to_original_coords(
+                    zoom_bbox_sequence, image_width, image_height
+                )
+                if transformed_bbox:
+                    pred_boxes.append(transformed_bbox)
+                    logger.debug(f"Transformed final bbox to original coords: {transformed_bbox}")
+                else:
+                    # Fallback: use the last bbox as-is
+                    logger.warning("Coordinate transformation failed, using last bbox as-is")
+                    pred_boxes.append(zoom_bbox_sequence[-1])
+            elif zoom_bbox_sequence:
+                # Single zoom or missing image dimensions: use last bbox as-is
+                pred_boxes.append(zoom_bbox_sequence[-1])
         
         if pred_boxes:
             # Check if mask image is available in extra_info (only exists for defective samples)
@@ -982,22 +787,10 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3) + 0.001
                 logger.debug(f"Using mask-based IoU: {bbox_iou:.4f}")
             else:
-                # Fallback to bbox-based IoU
-                # This handles two cases:
-                # 1. Good samples (label=0) without mask_image
-                # 2. Legacy data without mask_image field
-                # NOTE: For bbox-based IoU, we use pred_boxes directly without resize
-                # because we don't have image dimensions. This is acceptable since
-                # bbox-based IoU is mainly for good samples where bbox accuracy is less critical.
-                
-                # gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
-                # bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
-                # if gt_boxes:
-                #     logger.debug(f"Using bbox-based IoU with {len(gt_boxes)} GT boxes: {bbox_iou:.4f}")
-                # else:
-                #     logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
-                # for no mask image, base reward for use zoom tool
+                # Fallback case: Good samples (label=0) or legacy data without mask_image
+                # Provide base reward for tool usage
                 bbox_iou = 0.001
+                logger.debug("No mask image available, using base IoU reward")
     
     # Part 3: Tool diversity bonus
     # Give extra reward if both tools were used
@@ -1006,13 +799,29 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         tool_diversity_bonus = 0.1
         logger.debug("Tool diversity bonus: both zoom and reference tools used")
     
-    # Apply sqrt transformation to amplify small IoU differences
+    # Part 4: Zoom call count reward
+    # Encourage exactly 2 zoom tool calls for better inspection
+    zoom_count_reward = 0.0
+    if zoom_call_count == 0:
+        zoom_count_reward = 0.0  # No penalty if no zoom (might be a good sample)
+    elif zoom_call_count == 1:
+        zoom_count_reward = 0.05  # Small reward for at least trying
+    elif zoom_call_count == 2:
+        zoom_count_reward = 0.3  # Best reward for exactly 2 calls
+    elif zoom_call_count == 3:
+        zoom_count_reward = 0.1  # Reduced reward for 3 calls
+    else:
+        zoom_count_reward = -0.1  # Penalty for more than 3 calls (excessive)
+    
+    logger.debug(f"Zoom call count: {zoom_call_count}, reward: {zoom_count_reward:.4f}")
+    
+    # Apply cube root transformation to amplify small IoU differences
     bbox_iou_transformed = math.pow(bbox_iou, 1/3)
-    logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (sqrt)")
+    logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (cube root)")
     
     # Combined tool reward
-    # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus
-    tool_reward = 5 * bbox_iou_transformed + tool_diversity_bonus
+    # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus + zoom_count_reward
+    tool_reward = 5 * bbox_iou_transformed  + zoom_count_reward
     
     # Final score calculation
     # Weighted combination: format (0.5), acc (1.0), tool (0-5.1)
@@ -1024,17 +833,20 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         f"tool_usage={tool_usage_reward:.2f}, bbox_iou_raw={bbox_iou:.4f}, "
         f"bbox_iou_transformed={bbox_iou_transformed:.4f}, "
         f"tool_diversity_bonus={tool_diversity_bonus:.2f}, "
+        f"zoom_count={zoom_call_count}, zoom_count_reward={zoom_count_reward:.2f}, "
         f"tool={tool_reward:.2f}, final={final_score:.2f}"
     )
     logger.debug(f"Tools used: {tools_used}")
     
+    # Ensure all values are Python native types for JSON serialization
     return {
-        "score": final_score,
-        "format_reward": format_reward,
-        "acc_reward": acc_reward,
-        "tool_reward": tool_reward,
-        "bbox_iou": bbox_iou_transformed,
-        "tool_diversity_bonus": tool_diversity_bonus,
+        "score": float(final_score),
+        "format_reward": float(format_reward),
+        "acc_reward": float(acc_reward),
+        "tool_reward": float(tool_reward),
+        "bbox_iou": float(bbox_iou_transformed),
+        "tool_diversity_bonus": float(tool_diversity_bonus),
+        "zoom_count_reward": float(zoom_count_reward),
     }
 
 

@@ -52,15 +52,7 @@ class ImageReferenceTool(BaseTool):
                 ),
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "reason": {
-                            "type": "string",
-                            "description": (
-                                "Optional explanation of why you need the reference image "
-                                "(e.g., 'to compare surface texture', 'to verify if the spot is normal')."
-                            ),
-                        },
-                    },
+                    "properties": {},
                     "required": [],
                 },
             }
@@ -143,7 +135,7 @@ class ImageReferenceTool(BaseTool):
 
         Args:
             instance_id: The instance identifier
-            parameters: Dictionary containing optional 'reason' parameter
+            parameters: Dictionary (not used, kept for interface compatibility)
             **kwargs: Additional keyword arguments
 
         Returns:
@@ -152,7 +144,6 @@ class ImageReferenceTool(BaseTool):
             - reward: Small positive reward (0.0) for using the reference tool
             - metrics_dict: Dictionary with success status and metadata
         """
-        reason = parameters.get("reason", "")
         
         if instance_id not in self._instance_dict:
             return (
@@ -195,13 +186,27 @@ class ImageReferenceTool(BaseTool):
                 {"success": False, "error": "copy_failed"},
             )
 
-        # Construct response text
-        if reason:
-            response_text = f"Retrieved reference image for: {reason}"
+        # Construct response text with detailed comparison guidance
         response_text = (
-            "Here is a defect-free reference image of the same object class for comparison."
-            "You can use this reference image to help you analyze the defect."
-            )
+            "Successfully retrieved a defect-free reference image of the same object class. "
+            "Now conduct a systematic comparison between the reference and your current inspection target by addressing these key aspects in your <think> tags:\n\n"
+            "1. **Surface Texture Comparison**: Compare the surface finish between the two images. Is the texture pattern consistent? Are there any unusual roughness, smoothness, or texture variations in the current image that don't appear in the reference?\n\n"
+            "2. **Color and Appearance Consistency**: Examine color uniformity, reflectivity, and overall appearance. Does the current image show any discoloration, staining, or abnormal color variations compared to the reference?\n\n"
+            "3. **Structural Integrity**: Compare shapes, edges, and structural features. Are there any deformations, cracks, chips, or missing parts in the current image that are absent in the reference?\n\n"
+            "4. **Feature Identification**: Identify features present in the current image but absent in the reference (or vice versa). Determine if these differences represent:\n"
+            "   - Genuine defects (holes, scratches, contamination)\n"
+            "   - Normal manufacturing variations (acceptable tolerances)\n"
+            "   - Lighting or perspective artifacts\n\n"
+            "5. **Confidence Assessment**: After comparison, assess your confidence level:\n"
+            "   - High confidence: Clear differences indicate obvious defects or clear conformance\n"
+            "   - Medium confidence: Some ambiguous features require closer inspection (consider using zoom tool)\n"
+            "   - Low confidence: Differences are subtle or unclear (consider additional tool use or careful re-examination)\n\n"
+            "6. **Next Steps Decision**:\n"
+            "   - If the comparison reveals a clear defect or confirms the object is defect-free, provide your final conclusion with detailed reasoning.\n"
+            "   - If you identified suspicious regions that need closer examination, use the zoom tool to inspect them in detail.\n"
+            "   - If the comparison is inconclusive, explain what additional information you need.\n\n"
+            "Remember: The reference image shows what 'good' looks like. Any meaningful deviations from this baseline should be carefully evaluated."
+        )
 
         return (
             ToolResponse(
@@ -209,7 +214,7 @@ class ImageReferenceTool(BaseTool):
                 text=response_text,
             ),
             0.0,  # Neutral reward for retrieving reference
-            {"success": True, "reference_available": True, "reason": reason},
+            {"success": True, "reference_available": True},
         )
 
     async def release(self, instance_id: str, **kwargs) -> None:

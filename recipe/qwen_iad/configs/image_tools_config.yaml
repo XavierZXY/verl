@@ -37,9 +37,6 @@ tools:
         description: "Retrieve a defect-free reference image of the same object class for comparison. This helps identify anomalies by comparing the current image with a known good sample."
         parameters:
           type: "object"
-          properties:
-            reason:
-              type: "string"
-              description: "Optional explanation of why you need the reference image (e.g., 'to compare surface texture', 'to verify if the spot is normal')."
+          properties: {}
           required: []
 

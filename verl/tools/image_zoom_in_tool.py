@@ -311,12 +311,15 @@ class ImageZoomInTool(BaseTool):
             instance_id: An optional unique identifier for the instance. If not
                 provided, a new UUID will be generated.
             **kwargs: Should contain 'image' key with image data, or 'create_kwargs'
-                containing {'image': image_data}. Image can be one of the following:
+                containing {'image': image_data, 'mask_image': mask_data (optional)}. 
+                Image can be one of the following:
                 - A PIL.Image.Image object.
                 - A string containing an HTTP or HTTPS URL.
                 - A string containing a local file path.
                 - A string containing a file URI (e.g., "file:///path/to/image.jpg").
                 - A string containing a base64-encoded image in the format of "data:image/jpeg;base64,..."
+                
+                mask_image (optional): bytes data of ground truth mask for defect detection
 
         Returns:
             Tuple of (instance_id, ToolResponse)
@@ -335,8 +338,28 @@ class ImageZoomInTool(BaseTool):
             raise ValueError("Missing required 'image' parameter in kwargs")
 
         img = fetch_image({"image": image})
+        
+        # Get optional mask_image from kwargs
+        mask_image_bytes = kwargs.get("mask_image")
+        mask_img = None
+        if mask_image_bytes and isinstance(mask_image_bytes, bytes):
+            try:
+                from io import BytesIO
+                from PIL import Image as PILImage
+                mask_img = PILImage.open(BytesIO(mask_image_bytes))
+                if mask_img.mode != 'L':
+                    mask_img = mask_img.convert('L')
+                logger.info(f"Loaded mask image with size: {mask_img.size}")
+            except Exception as e:
+                logger.warning(f"Failed to load mask image: {e}")
+                mask_img = None
+        
         self._instance_dict[instance_id] = {
-            "image": img,
+            "original_image": img,  # Store original image
+            "current_image": img,   # Current image (may be cropped)
+            "original_mask": mask_img,  # Store original mask
+            "current_mask": mask_img,   # Current mask (may be cropped)
+            "crop_history": [],  # List of crop operations: [{"bbox": [x1,y1,x2,y2], "offset": [x,y]}]
             "response": "",
             "reward": 0.0,
         }
@@ -347,16 +370,23 @@ class ImageZoomInTool(BaseTool):
         label = parameters.get("label", "")
 
         instance_data = self._instance_dict[instance_id]
-        image = instance_data["image"]
+        current_image = instance_data["current_image"]
+        original_image = instance_data["original_image"]
+        current_mask = instance_data["current_mask"]
+        crop_history = instance_data["crop_history"]
         
         if not bbox_2d or len(bbox_2d) != 4:
             return (
                 ToolResponse(text="Error: bbox_2d parameter is missing or not a list of 4 numbers."),
                 -0.05,
-                {"success": False, "original_image": image},
+                {
+                    "success": False,
+                    "num_crops": len(crop_history),
+                },
             )
 
-        image_width, image_height = image.size
+        # Work on current image (which may be already cropped from previous calls)
+        image_width, image_height = current_image.size
 
         try:
             resized_bbox = self._maybe_resize_bbox(bbox_2d, image_width=image_width, image_height=image_height)
@@ -367,25 +397,94 @@ class ImageZoomInTool(BaseTool):
                     f"the minimum size of {self.MIN_DIMENSION}x{self.MIN_DIMENSION}."
                 )
                 logger.warning(f"Tool execution failed: {error_msg}")
-                return ToolResponse(text=error_msg), -0.05, {"success": False, "original_image": image}
+                return ToolResponse(text=error_msg), -0.05, {
+                    "success": False,
+                    "num_crops": len(crop_history),
+                }
 
-            cropped_image = image.crop(resized_bbox)
+            # Crop the current image
+            cropped_image = current_image.crop(resized_bbox)
             logger.info(f"Cropped image size: {cropped_image.size}")
+            
+            # Crop the current mask if it exists
+            cropped_mask = None
+            if current_mask is not None:
+                try:
+                    cropped_mask = current_mask.crop(resized_bbox)
+                    logger.info(f"Cropped mask size: {cropped_mask.size}")
+                except Exception as e:
+                    logger.warning(f"Failed to crop mask: {e}")
+                    cropped_mask = None
+            
+            # Record crop operation in history
+            # Store the bbox used (resized) and the offset in the current coordinate system
+            crop_record = {
+                "bbox": resized_bbox,  # The actual bbox used for cropping
+                "offset": [resized_bbox[0], resized_bbox[1]],  # Top-left corner offset
+            }
+            crop_history.append(crop_record)
+            
+            # Update instance data to use the cropped image/mask for next iteration
+            instance_data["current_image"] = cropped_image
+            instance_data["current_mask"] = cropped_mask
+            instance_data["crop_history"] = crop_history
+            
+            logger.info(f"Crop history length: {len(crop_history)}")
+            
         except Exception as e:
             logger.error(f"Error processing image zoom-in: {e}")
-            return ToolResponse(text=f"Error processing image zoom-in: {e}"), -0.05, {"success": False, "original_image": image}
+            return ToolResponse(text=f"Error processing image zoom-in: {e}"), -0.05, {
+                "success": False,
+                "num_crops": len(crop_history),
+            }
 
-        response_text = f"Zoomed in on the image to the region {bbox_2d}."
+        # Provide detailed guidance for chain-of-thought reasoning
+        response_text = (
+            f"Successfully zoomed in on the region {bbox_2d}. Now carefully analyze the magnified view by addressing these key questions in your <think> tags:\n\n"
+            "1. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish?\n\n"
+            "2. **Edge Characteristics**: If there are any features or marks, inspect their edges. Are they sharp and well-defined (suggesting physical defects like cracks or holes), or are they soft and diffuse (suggesting shadows, smudges, or normal variations)?\n\n"
+            "3. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be a surface-level mark or a three-dimensional feature (hole, pit, protrusion)?\n\n"
+            "4. **Comparison with Surroundings**: How does this region compare with the adjacent areas? Is there a clear boundary between defective and normal regions, or is this consistent with the overall surface pattern?\n\n"
+            "5. **Next Steps Decision**:\n"
+            "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer with detailed reasoning.\n"
+            "   - If you need to examine an even more specific sub-region, consider using the zoom tool again on a smaller bbox.\n"
+            "   - If you need to compare with a defect-free reference to determine if this feature is normal, consider using the image_reference_tool.\n\n"
+            "Remember: Your analysis should be thorough and systematic. Take your time to examine all visual cues before making a conclusion."
+        )
         if label:
-            response_text = f"Zoomed in on the image to the region {bbox_2d} with label {label}."
+            response_text = (
+                f"Successfully zoomed in on the region {bbox_2d} labeled as '{label}'. Now carefully analyze the magnified view by addressing these key questions in your <think> tags:\n\n"
+                "1. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish?\n\n"
+                "2. **Edge Characteristics**: If there are any features or marks, inspect their edges. Are they sharp and well-defined (suggesting physical defects like cracks or holes), or are they soft and diffuse (suggesting shadows, smudges, or normal variations)?\n\n"
+                "3. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be a surface-level mark or a three-dimensional feature (hole, pit, protrusion)?\n\n"
+                "4. **Comparison with Surroundings**: How does this region compare with the adjacent areas? Is there a clear boundary between defective and normal regions, or is this consistent with the overall surface pattern?\n\n"
+                "5. **Next Steps Decision**:\n"
+                "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer with detailed reasoning.\n"
+                "   - If you need to examine an even more specific sub-region, consider using the zoom tool again on a smaller bbox.\n"
+                "   - If you need to compare with a defect-free reference to determine if this feature is normal, consider using the image_reference_tool.\n\n"
+                "Remember: Your analysis should be thorough and systematic. Take your time to examine all visual cues before making a conclusion."
+            )
 
+        # Convert crop_history to JSON-serializable format (remove PIL Image objects)
+        serializable_crop_history = [
+            {
+                "bbox": [float(v) for v in record["bbox"]],  # Ensure all values are Python float
+                "offset": [float(v) for v in record["offset"]],
+            }
+            for record in crop_history
+        ]
+        
         return (
             ToolResponse(
                 image=[cropped_image],
                 text=response_text,
             ),
             0.0,
-            {"success": True, "original_image": image},  # Include original image for logging
+            {
+                "success": True,
+                "crop_history": serializable_crop_history,  # Only include serializable data
+                "num_crops": len(crop_history),
+            },
         )
 
     async def release(self, instance_id: str, **kwargs) -> None:
