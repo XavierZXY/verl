@@ -42,7 +42,7 @@ TEST_FREQ=10
 EXPERIMENT_NAME="Multizoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
-ray job submit --address="10.32.80.105:6379" \
+ray job submit --address="127.0.0.1:8265" \
 --working-dir=${BASEDIR} \
 --no-wait \
 -- \
