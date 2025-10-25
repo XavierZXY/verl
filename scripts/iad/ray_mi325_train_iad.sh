@@ -39,9 +39,16 @@ GRAD_CLIP=1
 SAVE_FREQ=20
 TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Ray-zoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Multizoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
+ray job submit  \
+--runtime-env=verl/trainer/runtime_env.yaml \
+--env LLM_AS_A_JUDGE_BASE="${LLM_AS_A_JUDGE_BASE}" \
+--env WANDB_API_KEY="${WANDB_API_KEY}" \
+--env SWANLAB_API_KEY="${SWANLAB_API_KEY}" \
+--no-wait \
+-- \
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     --config-path=${BASEDIR}/recipe/qwen_iad/configs \
     --config-name='qiad_multiturn_grpo' \
