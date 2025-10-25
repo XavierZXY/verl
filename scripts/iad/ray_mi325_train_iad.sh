@@ -43,7 +43,7 @@ EXPERIMENT_NAME="Multizoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH
 
 # ---------------- Train config -----------------
 ray job submit  \
---working-dir=${BASEDIR} \
+--runtime-env=verl/trainer/runtime_env.yaml \
 --no-wait \
 -- \
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
