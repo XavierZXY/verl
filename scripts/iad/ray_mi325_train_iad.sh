@@ -43,10 +43,7 @@ EXPERIMENT_NAME="Multizoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH
 
 # ---------------- Train config -----------------
 ray job submit  \
---runtime-env=verl/trainer/runtime_env.yaml \
---env LLM_AS_A_JUDGE_BASE="${LLM_AS_A_JUDGE_BASE}" \
---env WANDB_API_KEY="${WANDB_API_KEY}" \
---env SWANLAB_API_KEY="${SWANLAB_API_KEY}" \
+--runtime-env-json="{\"working_dir\": \".\", \"excludes\": [\"/.git/\"], \"env_vars\": {\"VLLM_USE_V1\": \"1\", \"LLM_AS_A_JUDGE_BASE\": \"${LLM_AS_A_JUDGE_BASE}\", \"WANDB_API_KEY\": \"${WANDB_API_KEY}\", \"SWANLAB_API_KEY\": \"${SWANLAB_API_KEY}\"}}" \
 --no-wait \
 -- \
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
