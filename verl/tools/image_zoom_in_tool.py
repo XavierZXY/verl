@@ -387,31 +387,43 @@ class ImageZoomInTool(BaseTool):
                 "success": False,
             }
 
-        # Provide detailed guidance for chain-of-thought reasoning
+        # Provide detailed guidance following the three-step methodology
         response_text = (
-            f"Successfully zoomed in on the region {bbox_2d}. Now carefully analyze the magnified view by addressing these key questions in your <think> tags:\n\n"
-            "1. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish?\n\n"
-            "2. **Edge Characteristics**: If there are any features or marks, inspect their edges. Are they sharp and well-defined (suggesting physical defects like cracks or holes), or are they soft and diffuse (suggesting shadows, smudges, or normal variations)?\n\n"
-            "3. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be a surface-level mark or a three-dimensional feature (hole, pit, protrusion)?\n\n"
-            "4. **Comparison with Surroundings**: How does this region compare with the adjacent areas? Is there a clear boundary between defective and normal regions, or is this consistent with the overall surface pattern?\n\n"
-            "5. **Next Steps Decision**:\n"
-            "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer with detailed reasoning.\n"
-            "   - If you need to examine an even more specific sub-region, consider using the zoom tool again on a smaller bbox.\n"
-            "   - If you need to compare with a defect-free reference to determine if this feature is normal, consider using the image_reference_tool.\n\n"
-            "Remember: Your analysis should be thorough and systematic. Take your time to examine all visual cues before making a conclusion."
+            f"Successfully zoomed in on the region {bbox_2d}. Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
+            "**Continue Step 3 - Detailed Analysis:**\n\n"
+            "1. **Review Your Hypothesis**: Recall why you selected this region (based on object type and prior knowledge from Steps 1-2). What specific defect type were you investigating?\n\n"
+            "2. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish for this object type?\n\n"
+            "3. **Edge Characteristics**: If there are any features or marks, inspect their edges carefully:\n"
+            "   - Sharp and well-defined edges → suggests physical defects (cracks, holes, chips)\n"
+            "   - Soft and diffuse edges → suggests shadows, smudges, or normal variations\n\n"
+            "4. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be:\n"
+            "   - A three-dimensional feature (hole, pit, protrusion) → likely a defect\n"
+            "   - A surface-level mark (shadow, reflection) → likely normal\n\n"
+            "5. **Comparison with Surroundings**: How does this region compare with adjacent areas? Is there a clear boundary between defective and normal regions?\n\n"
+            "6. **Defect Type Verification**: Does the observed feature match the defect pattern you expected for this critical region (based on Step 2 prior knowledge)?\n\n"
+            "7. **Next Steps Decision**:\n"
+            "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer using Format 2 or Format 3\n"
+            "   - If you need even higher magnification of a specific sub-feature, use the zoom tool again (remember: coordinates are relative to CURRENT image, max 2 zooms total)\n\n"
+            "Remember: Your analysis should validate or refute your initial hypothesis from Steps 1-2. Be systematic and base your conclusion on visual evidence."
         )
         if label:
             response_text = (
-                f"Successfully zoomed in on the region {bbox_2d} labeled as '{label}'. Now carefully analyze the magnified view by addressing these key questions in your <think> tags:\n\n"
-                "1. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish?\n\n"
-                "2. **Edge Characteristics**: If there are any features or marks, inspect their edges. Are they sharp and well-defined (suggesting physical defects like cracks or holes), or are they soft and diffuse (suggesting shadows, smudges, or normal variations)?\n\n"
-                "3. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be a surface-level mark or a three-dimensional feature (hole, pit, protrusion)?\n\n"
-                "4. **Comparison with Surroundings**: How does this region compare with the adjacent areas? Is there a clear boundary between defective and normal regions, or is this consistent with the overall surface pattern?\n\n"
-                "5. **Next Steps Decision**:\n"
-                "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer with detailed reasoning.\n"
-                "   - If you need to examine an even more specific sub-region, consider using the zoom tool again on a smaller bbox.\n"
-                "   - If you need to compare with a defect-free reference to determine if this feature is normal, consider using the image_reference_tool.\n\n"
-                "Remember: Your analysis should be thorough and systematic. Take your time to examine all visual cues before making a conclusion."
+                f"Successfully zoomed in on the region {bbox_2d} labeled as '{label}'. Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
+                "**Continue Step 3 - Detailed Analysis:**\n\n"
+                "1. **Review Your Hypothesis**: Recall why you selected this region labeled '{label}' (based on object type and prior knowledge from Steps 1-2). What specific defect type were you investigating?\n\n"
+                "2. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish for this object type?\n\n"
+                "3. **Edge Characteristics**: If there are any features or marks, inspect their edges carefully:\n"
+                "   - Sharp and well-defined edges → suggests physical defects (cracks, holes, chips)\n"
+                "   - Soft and diffuse edges → suggests shadows, smudges, or normal variations\n\n"
+                "4. **Depth and Dimensionality**: Look for signs of depth variation through shadowing or color gradients. Does this appear to be:\n"
+                "   - A three-dimensional feature (hole, pit, protrusion) → likely a defect\n"
+                "   - A surface-level mark (shadow, reflection) → likely normal\n\n"
+                "5. **Comparison with Surroundings**: How does this region compare with adjacent areas? Is there a clear boundary between defective and normal regions?\n\n"
+                "6. **Defect Type Verification**: Does the observed feature match the defect pattern you expected for this critical region (based on Step 2 prior knowledge)?\n\n"
+                "7. **Next Steps Decision**:\n"
+                "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer using Format 2 or Format 3\n"
+                "   - If you need even higher magnification of a specific sub-feature, use the zoom tool again (remember: coordinates are relative to CURRENT image, max 2 zooms total)\n\n"
+                "Remember: Your analysis should validate or refute your initial hypothesis from Steps 1-2. Be systematic and base your conclusion on visual evidence."
             )
         
         # Return the cropped image and metadata including the actual bbox used and offset

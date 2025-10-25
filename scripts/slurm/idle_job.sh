@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=machine_idle        # 任务名称
-#SBATCH --partition=Silo_Customer_Engineering         # 分区名称
-#SBATCH --nodelist=tw008               # 指定节点
+#SBATCH --partition=AIG_Models         # 分区名称
+#SBATCH --nodelist=tw049               # 指定节点
 #SBATCH --ntasks=1                     # 任务数量
 #SBATCH --cpus-per-task=64             # CPU核心数，根据需求调整
 #SBATCH --gres=gpu:8                   # GPU数量

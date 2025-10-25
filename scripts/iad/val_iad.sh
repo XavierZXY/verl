@@ -7,7 +7,7 @@ export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-tool"
+PROJECT_NAME="Val-iad"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
@@ -22,24 +22,24 @@ SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # debug for new data
 DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/moredata/train.parquet
 DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/moredata/test.parquet
-REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
+REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-72B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=5
-BATCH_SIZE=32
-PPO_BATCH_SIZE=32
-MICRO_BATCH_SIZE=4
+BATCH_SIZE=2
+PPO_BATCH_SIZE=2
+MICRO_BATCH_SIZE=1
 LR=1e-6
-LOG_PER_GPU_BATCH_SIZE=8
-ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.4
+LOG_PER_GPU_BATCH_SIZE=1
+ROLLOUT_PARALLELISM=8
+ROLLOUT_UTIL=0.8
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
 SAVE_FREQ=40
 TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Zoom-2stageprompt-debug--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Val-Qwen2.5-VL-72B-Instruct"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -92,6 +92,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.critic_warmup=0 \
     trainer.logger=['wandb','swanlab','console'] \
     trainer.val_before_train=True \
+    trainer.val_only=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
     trainer.save_freq=${SAVE_FREQ} \
