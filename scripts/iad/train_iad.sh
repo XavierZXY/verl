@@ -34,12 +34,12 @@ LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
 ROLLOUT_UTIL=0.4
 N_GPUS_PER_NODE=8
-N_ROLLOUT=16
+N_ROLLOUT=8
 GRAD_CLIP=1
-SAVE_FREQ=20
-TEST_FREQ=5
+SAVE_FREQ=40
+TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="NewPrompt-gspo-debug--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Zoom-debug--batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -88,7 +88,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_parallel_calls=1 \
-    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_iad/configs/image_tools_config.yaml \
+    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_iad/configs/image_zoom_in_tool_config.yaml \
     trainer.critic_warmup=0 \
     trainer.logger=['wandb','swanlab','console'] \
     trainer.val_before_train=True \
@@ -104,3 +104,5 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     +trainer.rl_logging_board_dir=${SAVE_CHECKPOINT_DIR}/logs/rl_logging_board \
     trainer.total_epochs=${TOTAL_EPOCHS} 2>&1 | tee ./logs/${EXPERIMENT_NAME}.log
     # trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \
+    # trainer.val_only=True \
+

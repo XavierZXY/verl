@@ -62,13 +62,15 @@ class AgentData:
         self.interaction = interaction
         self.interaction_kwargs = interaction_kwargs or {}
 
-        # Save original image for tool access
+        # Save original image for tracking and current image for tool access
         # Get the first image if it's a list, otherwise use the image directly
         if image_data is not None:
             if isinstance(image_data, list) and len(image_data) > 0:
                 self.original_image = image_data[0]
+                self.current_image = image_data[0]  # Start with original, update after each zoom
             else:
                 self.original_image = image_data
+                self.current_image = image_data  # Start with original, update after each zoom
             logger.info(
                 f"[DEBUG] AgentData initialized with original_image: type={type(self.original_image)}, "
                 f"is_PIL={hasattr(self.original_image, 'size')}, "
@@ -76,6 +78,7 @@ class AgentData:
             )
         else:
             self.original_image = None
+            self.current_image = None
             logger.info(f"[DEBUG] AgentData initialized with original_image=None")
 
         # State variables
@@ -93,6 +96,9 @@ class AgentData:
 
         # Multi-turn conversation tracking for logging
         self.conversation_history: list[dict[str, Any]] = []
+        
+        # Zoom tracking for coordinate transformation
+        self.zoom_offsets: list[tuple[float, float]] = []  # List of (x_offset, y_offset) from each zoom call
 
 
 @register("tool_agent")
@@ -213,6 +219,7 @@ class ToolAgentLoop(AgentLoopBase):
                 "turn_scores": agent_data.turn_scores,
                 "tool_rewards": agent_data.tool_rewards,
                 "conversation_history": agent_data.conversation_history,
+                "zoom_offsets": agent_data.zoom_offsets,  # For coordinate transformation in reward calculation
             }
         )
         return output
@@ -501,13 +508,34 @@ class ToolAgentLoop(AgentLoopBase):
             kwargs = agent_data.tools_kwargs.get(tool_name, {})
             create_kwargs = kwargs.get("create_kwargs", {})
 
-            # Add original image data to create_kwargs if available
-            # Use original_image to ensure each tool call gets the same original image
-            if agent_data.original_image is not None:
-                create_kwargs["image"] = agent_data.original_image
+            # For zoom tool, use current_image (which may be a cropped image from previous zoom)
+            # For other tools, use original_image
+            if tool_name == "image_zoom_in_tool":
+                if agent_data.current_image is not None:
+                    create_kwargs["image"] = agent_data.current_image
+            else:
+                # For other tools like image_reference_tool, use original image
+                if agent_data.original_image is not None:
+                    create_kwargs["image"] = agent_data.original_image
 
             instance_id, _ = await tool.create(create_kwargs=create_kwargs)
             tool_execution_response, tool_reward, res = await tool.execute(instance_id, tool_args)
+            
+            # If this is a zoom tool and it succeeded, update current_image and track offset
+            if tool_name == "image_zoom_in_tool" and res.get("success", False):
+                # The cropped image is in tool_execution_response.image
+                if tool_execution_response.image:
+                    if isinstance(tool_execution_response.image, list):
+                        agent_data.current_image = tool_execution_response.image[0]
+                    else:
+                        agent_data.current_image = tool_execution_response.image
+                    logger.info(f"Updated current_image after zoom, new size: {agent_data.current_image.size}")
+                
+                # Track the offset for coordinate transformation
+                offset = res.get("offset", [0.0, 0.0])
+                agent_data.zoom_offsets.append((float(offset[0]), float(offset[1])))
+                logger.info(f"Recorded zoom offset: {offset}, total offsets: {len(agent_data.zoom_offsets)}")
+                
         except Exception as e:
             logger.warning(f"Error when executing tool: {e}")
             return (

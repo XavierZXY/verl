@@ -38,17 +38,17 @@ client = OpenAI(
 )
 
 model_name = ""
-if openai_api_base:
-    try:
-        response = requests.get(f"{openai_api_base}/models")
-        response.raise_for_status()
-        models = response.json()
-        if models.get("data"):
-            model_name = models["data"][0]["id"]
-        else:
-            logger.warning("No models found at the specified API base for reward scoring.")
-    except (requests.exceptions.RequestException, KeyError, IndexError) as e:
-        logger.warning(f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled.")
+# if openai_api_base:
+#     try:
+#         response = requests.get(f"{openai_api_base}/models")
+#         response.raise_for_status()
+#         models = response.json()
+#         if models.get("data"):
+#             model_name = models["data"][0]["id"]
+#         else:
+#             logger.warning("No models found at the specified API base for reward scoring.")
+#     except (requests.exceptions.RequestException, KeyError, IndexError) as e:
+#         logger.warning(f"Failed to get model from {openai_api_base}: {e}. Reward scoring will be disabled.")
 
 
 class CustomRLHFDataset(RLHFDataset):
@@ -167,14 +167,12 @@ class CustomRLHFDataset(RLHFDataset):
         # Get good reference image from extra_info if available
         good_reference_image = row_dict.get("extra_info", {}).get("good_reference_image")
         
-        # Get mask image from extra_info if available (for defect detection)
-        mask_image = row_dict.get("extra_info", {}).get("mask_image")
+        # Note: mask_image is kept in extra_info for reward calculation only, not passed to zoom tool
         
         tools_kwargs = {
             "image_zoom_in_tool": {
                 "create_kwargs": {
                     "image": images[0],
-                    "mask_image": mask_image,  # Pass mask image for synchronized cropping
                 },
                 # "execute_kwargs": {},
                 # "calc_reward_kwargs": {},
@@ -315,24 +313,22 @@ def _maybe_resize_bbox(bbox_2d, image_width, image_height, min_dimension=28):
     return current_bbox
 
 
-def _extract_zoom_bbox_sequence(solution_str):
+def _extract_last_zoom_bbox(solution_str):
     """
-    Extract all image_zoom_in_tool bbox calls in chronological order.
-    
-    This is used to compute coordinate transformations when multiple zoom calls are made.
+    Extract the LAST image_zoom_in_tool bbox call from the solution.
     
     Args:
         solution_str: The model's solution string
         
     Returns:
-        List of bbox coordinates [x1, y1, x2, y2] in chronological order
+        Last bbox coordinates [x1, y1, x2, y2] or None if no zoom call found
     """
     import json
     
     tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
     tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
     
-    zoom_bboxes = []
+    last_zoom_bbox = None
     for tool_call_content in tool_calls:
         try:
             tool_data = json.loads(tool_call_content.strip())
@@ -344,7 +340,7 @@ def _extract_zoom_bbox_sequence(solution_str):
                     args = tool_data.get("parameters", {}) or tool_data.get("arguments", {})
                     bbox = args.get("bbox_2d") or args.get("bbox2d")
                     if bbox and isinstance(bbox, list) and len(bbox) == 4:
-                        zoom_bboxes.append([float(v) for v in bbox])
+                        last_zoom_bbox = [float(v) for v in bbox]
             elif isinstance(tool_data, list):
                 for item in tool_data:
                     if isinstance(item, dict):
@@ -353,95 +349,45 @@ def _extract_zoom_bbox_sequence(solution_str):
                             args = item.get("parameters", {}) or item.get("arguments", {})
                             bbox = args.get("bbox_2d") or args.get("bbox2d")
                             if bbox and isinstance(bbox, list) and len(bbox) == 4:
-                                zoom_bboxes.append([float(v) for v in bbox])
+                                last_zoom_bbox = [float(v) for v in bbox]
         except (json.JSONDecodeError, ValueError, TypeError):
             continue
     
-    return zoom_bboxes
+    return last_zoom_bbox
 
 
-def _transform_bbox_to_original_coords(bbox_sequence, image_width, image_height):
+def _transform_bbox_with_offsets(bbox, zoom_offsets):
     """
-    Transform a sequence of bbox coordinates through multiple zoom operations back to original coordinates.
+    Transform a bbox from a nested coordinate system to the original coordinate system.
     
-    When zoom tool is called multiple times, each subsequent bbox is in the coordinate system
-    of the previous crop. This function transforms the final bbox back to the original image coordinates.
+    When zoom is called multiple times, each zoom crops the previous image, creating nested
+    coordinate systems. This function applies cumulative offsets to transform a bbox back
+    to the original image's coordinate system.
     
     Args:
-        bbox_sequence: List of bboxes [x1, y1, x2, y2], where each bbox may be in different coord systems
-        image_width: Original image width
-        image_height: Original image height
+        bbox: Bbox in the final zoomed coordinate system [x1, y1, x2, y2]
+        zoom_offsets: List of (x_offset, y_offset) tuples from each zoom operation
         
     Returns:
-        The final bbox transformed to original image coordinates, or None if transformation fails
+        Bbox in original coordinate system [x1, y1, x2, y2]
     """
-    if not bbox_sequence:
-        return None
+    if not zoom_offsets:
+        return bbox
     
-    if len(bbox_sequence) == 1:
-        # Only one zoom, bbox is already in original coordinates
-        return bbox_sequence[0]
+    # Accumulate all offsets
+    cumulative_x = sum(offset[0] for offset in zoom_offsets)
+    cumulative_y = sum(offset[1] for offset in zoom_offsets)
     
-    # Multiple zooms: need to transform coordinates
-    # Each bbox (except the first) is relative to the previous crop
-    try:
-        # Start with the first bbox (in original coordinates)
-        current_bbox = list(bbox_sequence[0])
-        
-        # Apply the resize logic to match what the tool actually uses
-        resized_bbox = _maybe_resize_bbox(current_bbox, image_width, image_height)
-        if resized_bbox is None:
-            logger.warning(f"First bbox {current_bbox} failed validation")
-            return None
-        
-        # The crop region becomes the new coordinate system
-        crop_offset_x = resized_bbox[0]
-        crop_offset_y = resized_bbox[1]
-        crop_width = resized_bbox[2] - resized_bbox[0]
-        crop_height = resized_bbox[3] - resized_bbox[1]
-        
-        # For each subsequent bbox, transform it to original coordinates
-        for i in range(1, len(bbox_sequence)):
-            next_bbox = bbox_sequence[i]
-            
-            # This bbox is in the coordinate system of the previous crop
-            # Transform to original coordinates by adding the cumulative offset
-            transformed_bbox = [
-                crop_offset_x + next_bbox[0],
-                crop_offset_y + next_bbox[1],
-                crop_offset_x + next_bbox[2],
-                crop_offset_y + next_bbox[3],
-            ]
-            
-            # Apply resize logic in the current crop's coordinate system
-            resized_in_crop = _maybe_resize_bbox(next_bbox, crop_width, crop_height)
-            if resized_in_crop is None:
-                logger.warning(f"Bbox {next_bbox} at position {i} failed validation in crop space")
-                return None
-            
-            # Transform the resized bbox to original coordinates
-            final_bbox = [
-                crop_offset_x + resized_in_crop[0],
-                crop_offset_y + resized_in_crop[1],
-                crop_offset_x + resized_in_crop[2],
-                crop_offset_y + resized_in_crop[3],
-            ]
-            
-            # Update for next iteration if there are more zooms
-            if i < len(bbox_sequence) - 1:
-                crop_offset_x = final_bbox[0]
-                crop_offset_y = final_bbox[1]
-                crop_width = final_bbox[2] - final_bbox[0]
-                crop_height = final_bbox[3] - final_bbox[1]
-            
-            current_bbox = final_bbox
-        
-        logger.debug(f"Transformed {len(bbox_sequence)} bboxes: {bbox_sequence[0]} -> ... -> {current_bbox}")
-        return current_bbox
-        
-    except Exception as e:
-        logger.error(f"Failed to transform bbox sequence: {e}")
-        return None
+    # Transform bbox by adding cumulative offsets
+    transformed_bbox = [
+        bbox[0] + cumulative_x,
+        bbox[1] + cumulative_y,
+        bbox[2] + cumulative_x,
+        bbox[3] + cumulative_y,
+    ]
+    
+    logger.debug(f"Transformed bbox {bbox} with {len(zoom_offsets)} offsets to {transformed_bbox}")
+    return transformed_bbox
 
 
 def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
@@ -536,7 +482,7 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
         size_penalty = 1.0
         if gt_area > 0:
             area_ratio = pred_area / gt_area
-            if area_ratio > 20.0:  # Prediction area is 20x larger than GT
+            if area_ratio > 100.0:  # Prediction area is 20x larger than GT
                 import math
                 size_penalty = 1.0 / (1.0 + math.log(area_ratio / 3.0))
                 logger.debug(f"Size penalty applied: area_ratio={area_ratio:.2f}, penalty={size_penalty:.4f}")
@@ -695,7 +641,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     has_tool_usage = count_tool_call_1 > 0
     tool_usage_reward = 1.0 if has_tool_usage else 0.0
     
-    # Part 2: Compute bbox IoU from tool_call parameters or mask image
+    # Part 2: Compute bbox IoU from the LAST zoom call
     # Also detect which tools were used and count zoom tool calls
     bbox_iou = 0.0
     tools_used = set()
@@ -728,49 +674,23 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
-        # Extract all zoom bbox calls for coordinate transformation
-        zoom_bbox_sequence = _extract_zoom_bbox_sequence(solution_str)
+        # Extract the LAST zoom bbox call for IoU calculation
+        last_zoom_bbox = _extract_last_zoom_bbox(solution_str)
         
         pred_boxes = []
-        if zoom_bbox_sequence:
-            # Try to get image dimensions from extra_info or mask image
-            image_width = None
-            image_height = None
+        if last_zoom_bbox:
+            # Get zoom_offsets from extra_info (passed from agent_loop)
+            zoom_offsets = extra_info.get("zoom_offsets", []) if extra_info else []
             
-            if extra_info and isinstance(extra_info, dict):
-                # First try direct width/height from extra_info
-                image_width = extra_info.get("image_width")
-                image_height = extra_info.get("image_height")
-                
-                # If not found, try to extract from mask_image
-                if (image_width is None or image_height is None) and "mask_image" in extra_info:
-                    gt_mask_bytes = extra_info.get("mask_image")
-                    if gt_mask_bytes and isinstance(gt_mask_bytes, bytes):
-                        try:
-                            from io import BytesIO
-                            from PIL import Image as PILImage
-                            mask_img = PILImage.open(BytesIO(gt_mask_bytes))
-                            image_width, image_height = mask_img.size
-                            logger.debug(f"Extracted image dimensions from mask: {image_width}x{image_height}")
-                        except Exception as e:
-                            logger.warning(f"Failed to extract dimensions from mask: {e}")
-            
-            # If we have multiple zoom calls, transform the final bbox to original coordinates
-            if len(zoom_bbox_sequence) > 1 and image_width and image_height:
-                logger.debug(f"Multiple zoom calls detected: {len(zoom_bbox_sequence)}")
-                transformed_bbox = _transform_bbox_to_original_coords(
-                    zoom_bbox_sequence, image_width, image_height
-                )
-                if transformed_bbox:
-                    pred_boxes.append(transformed_bbox)
-                    logger.debug(f"Transformed final bbox to original coords: {transformed_bbox}")
-                else:
-                    # Fallback: use the last bbox as-is
-                    logger.warning("Coordinate transformation failed, using last bbox as-is")
-                    pred_boxes.append(zoom_bbox_sequence[-1])
-            elif zoom_bbox_sequence:
-                # Single zoom or missing image dimensions: use last bbox as-is
-                pred_boxes.append(zoom_bbox_sequence[-1])
+            # Transform the last bbox to original coordinate system using offsets
+            if zoom_offsets:
+                transformed_bbox = _transform_bbox_with_offsets(last_zoom_bbox, zoom_offsets)
+                pred_boxes.append(transformed_bbox)
+                logger.debug(f"Transformed last bbox {last_zoom_bbox} to original coords: {transformed_bbox}")
+            else:
+                # No zoom offsets (single zoom or legacy data), use bbox as-is
+                pred_boxes.append(last_zoom_bbox)
+                logger.debug(f"Using last bbox as-is (no offsets): {last_zoom_bbox}")
         
         if pred_boxes:
             # Check if mask image is available in extra_info (only exists for defective samples)
@@ -805,13 +725,11 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     if zoom_call_count == 0:
         zoom_count_reward = 0.0  # No penalty if no zoom (might be a good sample)
     elif zoom_call_count == 1:
-        zoom_count_reward = 0.05  # Small reward for at least trying
+        zoom_count_reward = 0.1  # Small reward for at least trying
     elif zoom_call_count == 2:
         zoom_count_reward = 0.3  # Best reward for exactly 2 calls
-    elif zoom_call_count == 3:
-        zoom_count_reward = 0.1  # Reduced reward for 3 calls
     else:
-        zoom_count_reward = -0.1  # Penalty for more than 3 calls (excessive)
+        zoom_count_reward = -0.4  # Penalty for more than 3 calls (excessive)
     
     logger.debug(f"Zoom call count: {zoom_call_count}, reward: {zoom_count_reward:.4f}")
     
@@ -821,11 +739,18 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     
     # Combined tool reward
     # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus + zoom_count_reward
-    tool_reward = 5 * bbox_iou_transformed  + zoom_count_reward
     
+    tool_reward = 5 * bbox_iou_transformed  + zoom_count_reward
+    tool_valid_reward = 0.0
+    if acc_reward == 1.0:
+        tool_valid_reward = 0.4
+    elif acc_reward == 0.0:
+        tool_valid_reward = -0.3
+    else:
+        tool_valid_reward = 0.0
     # Final score calculation
     # Weighted combination: format (0.5), acc (1.0), tool (0-5.1)
-    final_score = 0.3 * format_reward +  acc_reward +  tool_reward
+    final_score = 0.3 * format_reward +  acc_reward +  tool_reward + tool_valid_reward
     
     # Log for debugging
     logger.debug(
@@ -847,6 +772,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
         "bbox_iou": float(bbox_iou_transformed),
         "tool_diversity_bonus": float(tool_diversity_bonus),
         "zoom_count_reward": float(zoom_count_reward),
+        "tool_valid_reward": float(tool_valid_reward),
     }
 
 
