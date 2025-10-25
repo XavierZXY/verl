@@ -740,7 +740,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     # Combined tool reward
     # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus + zoom_count_reward
     
-    tool_reward = 5 * bbox_iou_transformed  + zoom_count_reward
+    tool_reward = 2 * bbox_iou_transformed  + zoom_count_reward
     tool_valid_reward = 0.0
     if acc_reward == 1.0:
         tool_valid_reward = 0.4
