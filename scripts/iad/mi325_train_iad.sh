@@ -36,10 +36,10 @@ ROLLOUT_UTIL=0.5
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
-SAVE_FREQ=20
+SAVE_FREQ=40
 TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Multizoom-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Zoom-newprompt-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -101,5 +101,5 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.default_local_dir=${SAVE_CHECKPOINT_DIR}/${PROJECT_NAME}/${EXPERIMENT_NAME} \
     +trainer.tensorboard_dir=${SAVE_CHECKPOINT_DIR}/logs/tensorboard \
     +trainer.rl_logging_board_dir=${SAVE_CHECKPOINT_DIR}/logs/rl_logging_board \
-    trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \
     trainer.total_epochs=${TOTAL_EPOCHS} 2>&1 | tee ./logs/${EXPERIMENT_NAME}.log
+    # trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \
