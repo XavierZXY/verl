@@ -21,7 +21,7 @@ SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
 # DATASET_VAL=/wekafs/takisobe/zxy/codes/verl/data/visa-2k/test/test.parquet
 # debug for new data
 # DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
-DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/train/train.parquet
+DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/train_cropped.parquet
 DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/test/test.parquet
 REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
@@ -40,7 +40,7 @@ GRAD_CLIP=1
 SAVE_FREQ=40
 TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Zoom-data-1800-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Zoom-data-2300-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \

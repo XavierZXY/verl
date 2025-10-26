@@ -1,0 +1,46 @@
+# Configuration for V2 data conversion with cropping support
+# This version crops defective images into multiple small images based on defect regions
+
+# Input JSONL file path
+input = "../../../data-v2/mvtec/mvtec_test.jsonl"
+# input = "../../../visa-2k/moredata/visa-test.jsonl"
+
+# Dataset root directory
+# root = "/home/takisobe@amd.com/zxy/data/MVTec-2K"
+root = "/home/takisobe@amd.com/zxy/data/MVTec"
+# root = "/home/takisobe@amd.com/zxy/data/VisA-2K"
+
+# Output file path
+output = "../../../data-v2/mvtec/train_cropped.parquet"
+
+# Output format: "parquet" or "jsonl"
+format = "parquet"
+
+# Limit number of items to process (null for all)
+# limit = 10
+
+# Image compression settings
+compress_images = true
+image_quality = 85
+
+# Maximum image size [width, height] (null for no resize)
+# Example: [1024, 1024] will resize images to fit within 1024x1024
+# Note: This is applied BEFORE cropping
+max_image_size = [2048, 2048]
+
+# Crop configuration for defect detection
+[crop]
+# Enable cropping feature (true/false)
+enabled = true
+
+# Minimum crop size in pixels (default: 768)
+# Each cropped image will be at least this size (if original image allows)
+min_crop_size = 768
+
+# Minimum defect area in pixels to be considered valid (default: 100)
+# Smaller regions will be filtered out as noise
+min_defect_area = 100
+
+# Padding ratio around defect region (default: 0.1)
+# Adds 10% extra padding around the detected defect bounding box
+padding_ratio = 0.1

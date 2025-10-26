@@ -7,7 +7,7 @@ export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-tool"
+PROJECT_NAME="iad-zoom"
 
 BASEDIR=/home/takisobe@amd.com/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
@@ -54,7 +54,6 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     data.return_raw_chat=True \
     data.filter_overlong_prompts=True \
     data.shuffle=True \
-    data.seed=42 \
     algorithm.adv_estimator=grpo \
     algorithm.kl_ctrl.kl_coef=0.0 \
     actor_rollout_ref.model.path=${REF_MODEL_PATH} \
