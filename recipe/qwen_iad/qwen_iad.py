@@ -742,15 +742,19 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     
     tool_reward = 2 * bbox_iou_transformed  + zoom_count_reward
     tool_valid_reward = 0.0
-    if acc_reward == 1.0:
-        tool_valid_reward = 0.4
-    elif acc_reward == 0.0:
-        tool_valid_reward = -0.3
+    if acc_reward == 1.0 and zoom_count_reward > 0:
+        tool_valid_reward = 0.8
+    elif acc_reward == 0.0 and zoom_count_reward > 0:
+        tool_valid_reward = -0.6
     else:
         tool_valid_reward = 0.0
     # Final score calculation
     # Weighted combination: format (0.5), acc (1.0), tool (0-5.1)
-    final_score = 0.3 * format_reward +  acc_reward +  tool_reward + tool_valid_reward
+    # if epoch < 2
+    # final_score = 0.3 * format_reward +  acc_reward +  tool_reward + 0.5 * tool_valid_reward
+    # elif epoch > 2
+    final_score = 0.3 * format_reward +  acc_reward + tool_valid_reward
+    
     
     # Log for debugging
     logger.debug(
