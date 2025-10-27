@@ -188,7 +188,10 @@ class ToolAgentLoop(AgentLoopBase):
         # Finalize output
         response_ids = agent_data.prompt_ids[-len(agent_data.response_mask) :]
         prompt_ids = agent_data.prompt_ids[: len(agent_data.prompt_ids) - len(agent_data.response_mask)]
-        multi_modal_data = {"image": agent_data.image_data} if agent_data.image_data is not None else {}
+        # Always use original_image to match the image used during generation
+        # This ensures image tokens in prompt_ids match the image features in multi_modal_data
+        # (Different image sizes generate different numbers of vision tokens in Qwen2-VL)
+        multi_modal_data = {"image": [agent_data.original_image]} if agent_data.original_image is not None else {}
         output = AgentLoopOutput(
             prompt_ids=prompt_ids,
             response_ids=response_ids[: self.response_length],
@@ -237,7 +240,16 @@ class ToolAgentLoop(AgentLoopBase):
                     **self.apply_chat_template_kwargs,
                 ),
             )
-            model_inputs = self.processor(text=[raw_prompt], images=agent_data.image_data, return_tensors="pt")
+            # Always use original_image to maintain consistent vision token counts across turns
+            # (Qwen2-VL generates different token counts for different image sizes)
+            # current_image is used only for zoom tool's progressive cropping
+            image_for_generation = [agent_data.original_image] if agent_data.original_image is not None else None
+            if image_for_generation:
+                logger.info(
+                    f"[PENDING] Using original_image for generation, size: {agent_data.original_image.size}, "
+                    f"current_image_size: {agent_data.current_image.size if agent_data.current_image else 'None'}"
+                )
+            model_inputs = self.processor(text=[raw_prompt], images=image_for_generation, return_tensors="pt")
             agent_data.prompt_ids = model_inputs.pop("input_ids").squeeze(0).tolist()
         else:
             agent_data.prompt_ids = await self.loop.run_in_executor(
@@ -258,12 +270,23 @@ class ToolAgentLoop(AgentLoopBase):
         """Handle the generating state: generate model response and check for tool calls."""
         add_messages: list[dict[str, Any]] = []
 
+        # Always use original_image to maintain consistent vision token counts across turns
+        # (Qwen2-VL generates different token counts for different image sizes)
+        # current_image is used only for zoom tool's progressive cropping
+        image_for_generation = [agent_data.original_image] if agent_data.original_image is not None else None
+        if image_for_generation:
+            logger.info(
+                f"[GENERATING] Turn {agent_data.assistant_turns + 1}: Using original_image for generation, "
+                f"size: {agent_data.original_image.size}, "
+                f"current_image_size: {agent_data.current_image.size if agent_data.current_image else 'None'}"
+            )
+        
         with simple_timer("generate_sequences", agent_data.metrics):
             output = await self.server_manager.generate(
                 request_id=agent_data.request_id,
                 prompt_ids=agent_data.prompt_ids,
                 sampling_params=sampling_params,
-                image_data=agent_data.image_data,
+                image_data=image_for_generation,
             )
 
         agent_data.assistant_turns += 1
@@ -314,7 +337,6 @@ class ToolAgentLoop(AgentLoopBase):
     async def _handle_processing_tools_state(self, agent_data: AgentData) -> AgentState:
         """Handle the processing tools state: execute tool calls and prepare tool responses."""
         add_messages: list[dict[str, Any]] = []
-        new_images_this_turn: list[Any] = []  # Local variable instead of agent_data attribute
 
         tasks = []
         for tool_call in agent_data.tool_calls[: self.max_parallel_calls]:
@@ -327,25 +349,10 @@ class ToolAgentLoop(AgentLoopBase):
         # Removed: agent_data.new_images_this_turn = []
         for idx, (tool_response, tool_reward, tool_metadata) in enumerate(responses):
             # Create message from tool response
-            if tool_response.image or tool_response.video:
-                # Multi-modal content with structured format
-                if not getattr(self.processor, "image_processor", None):
-                    raise ValueError(
-                        "Multimedia data can only be processed by `processor`, but the processor is None. "
-                        "This error is often caused if you are using a LLM model but your tool returns multimodal "
-                        "data. Plase use a vlm as the base model."
-                    )
-                content = []
-                if tool_response.image:
-                    content.append({"type": "image"})
-                if tool_response.video:
-                    content.append({"type": "video"})
-                if tool_response.text:
-                    content.append({"type": "text", "text": tool_response.text})
-                message = {"role": "tool", "content": content}
-            else:
-                # Text-only content
-                message = {"role": "tool", "content": tool_response.text or ""}
+            # IMPORTANT: Don't include image reference in tool message to avoid multiple image tokens in prompt_ids
+            # The model will see the updated current_image through agent_data.current_image
+            # Only keep text description in the message
+            message = {"role": "tool", "content": tool_response.text or ""}
 
             add_messages.append(message)
             agent_data.messages.extend(add_messages)
@@ -372,30 +379,27 @@ class ToolAgentLoop(AgentLoopBase):
             else:
                 logger.warning(f"[DEBUG] agent_data.original_image is None for tool_history_entry[{idx}]")
 
-            # Handle image data
+            # Handle image data for logging purposes
+            # Note: Images are NOT included in the message to avoid multiple image tokens in prompt_ids
             if tool_response.image:
                 if agent_data.image_data is None:
                     agent_data.image_data = []
                 elif not isinstance(agent_data.image_data, list):
                     agent_data.image_data = [agent_data.image_data]
 
-                # Add new image data
+                # Add new image data to history for logging
                 cropped_images_for_logging = []
                 if isinstance(tool_response.image, list):
-                    # Ensure all elements in the list are valid image objects
                     for img in tool_response.image:
-                        if img is not None:  # Add a check to ensure the image is not None
+                        if img is not None:
                             agent_data.image_data.append(img)
-                            new_images_this_turn.append(img)  # Using local variable
                             cropped_images_for_logging.append(img)
                 else:
-                    # Ensure the image is not None
                     if tool_response.image is not None:
                         agent_data.image_data.append(tool_response.image)
-                        new_images_this_turn.append(tool_response.image)  # Using local variable
                         cropped_images_for_logging.append(tool_response.image)
 
-                # Add cropped images to history entry
+                # Add cropped images to history entry for logging
                 tool_history_entry["cropped_images"] = cropped_images_for_logging
 
             # Handle video data
@@ -424,9 +428,9 @@ class ToolAgentLoop(AgentLoopBase):
                     **self.apply_chat_template_kwargs,
                 ),
             )
-            # Use only the new images from this turn for processing tool responses
-            current_images = new_images_this_turn if new_images_this_turn else None  # Using local variable
-            model_inputs = self.processor(text=[raw_tool_response], images=current_images, return_tensors="pt")
+            # Don't pass images when encoding tool response since we removed image references from messages
+            # This ensures prompt_ids only contains one image token (from initial user message)
+            model_inputs = self.processor(text=[raw_tool_response], images=None, return_tensors="pt")
             response_ids = model_inputs.pop("input_ids").squeeze(0).tolist()
         else:
             response_ids = await self.loop.run_in_executor(

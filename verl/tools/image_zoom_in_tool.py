@@ -388,8 +388,12 @@ class ImageZoomInTool(BaseTool):
             }
 
         # Provide detailed guidance following the three-step methodology
+        cropped_width, cropped_height = cropped_image.size
         response_text = (
-            f"Successfully zoomed in on the region {bbox_2d}. Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
+            f"Successfully zoomed in on the region {bbox_2d}.\n\n"
+            f"**IMPORTANT**: You now see ONLY the cropped image (size: {cropped_width}×{cropped_height}px). The previous image is no longer visible.\n"
+            f"If you zoom again, coordinates must be relative to THIS {cropped_width}×{cropped_height}px image, with [0, 0] at top-left and [{cropped_width}, {cropped_height}] at bottom-right.\n\n"
+            "Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
             "**Continue Step 3 - Detailed Analysis:**\n\n"
             "1. **Review Your Hypothesis**: Recall why you selected this region (based on object type and prior knowledge from Steps 1-2). What specific defect type were you investigating?\n\n"
             "2. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish for this object type?\n\n"
@@ -403,14 +407,17 @@ class ImageZoomInTool(BaseTool):
             "6. **Defect Type Verification**: Does the observed feature match the defect pattern you expected for this critical region (based on Step 2 prior knowledge)?\n\n"
             "7. **Next Steps Decision**:\n"
             "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer using Format 2 or Format 3\n"
-            "   - If you need even higher magnification of a specific sub-feature, use the zoom tool again (remember: coordinates are relative to CURRENT image, max 2 zooms total)\n\n"
+            f"   - If you need even higher magnification, zoom again using coordinates in [0, 0] to [{cropped_width}, {cropped_height}] range (max 2 zooms total)\n\n"
             "Remember: Your analysis should validate or refute your initial hypothesis from Steps 1-2. Be systematic and base your conclusion on visual evidence."
         )
         if label:
             response_text = (
-                f"Successfully zoomed in on the region {bbox_2d} labeled as '{label}'. Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
+                f"Successfully zoomed in on the region {bbox_2d} labeled as '{label}'.\n\n"
+                f"**IMPORTANT**: You now see ONLY the cropped image (size: {cropped_width}×{cropped_height}px). The previous image is no longer visible.\n"
+                f"If you zoom again, coordinates must be relative to THIS {cropped_width}×{cropped_height}px image, with [0, 0] at top-left and [{cropped_width}, {cropped_height}] at bottom-right.\n\n"
+                "Now analyze the magnified view following the three-step methodology in your <think> tags:\n\n"
                 "**Continue Step 3 - Detailed Analysis:**\n\n"
-                "1. **Review Your Hypothesis**: Recall why you selected this region labeled '{label}' (based on object type and prior knowledge from Steps 1-2). What specific defect type were you investigating?\n\n"
+                f"1. **Review Your Hypothesis**: Recall why you selected this region labeled '{label}' (based on object type and prior knowledge from Steps 1-2). What specific defect type were you investigating?\n\n"
                 "2. **Texture Analysis**: Examine the surface texture in detail. Do you observe any irregular patterns, roughness, or discontinuities that differ from the expected surface finish for this object type?\n\n"
                 "3. **Edge Characteristics**: If there are any features or marks, inspect their edges carefully:\n"
                 "   - Sharp and well-defined edges → suggests physical defects (cracks, holes, chips)\n"
@@ -422,7 +429,7 @@ class ImageZoomInTool(BaseTool):
                 "6. **Defect Type Verification**: Does the observed feature match the defect pattern you expected for this critical region (based on Step 2 prior knowledge)?\n\n"
                 "7. **Next Steps Decision**:\n"
                 "   - If you now have sufficient evidence to conclude (defect found or ruled out), provide your final answer using Format 2 or Format 3\n"
-                "   - If you need even higher magnification of a specific sub-feature, use the zoom tool again (remember: coordinates are relative to CURRENT image, max 2 zooms total)\n\n"
+                f"   - If you need even higher magnification, zoom again using coordinates in [0, 0] to [{cropped_width}, {cropped_height}] range (max 2 zooms total)\n\n"
                 "Remember: Your analysis should validate or refute your initial hypothesis from Steps 1-2. Be systematic and base your conclusion on visual evidence."
             )
         

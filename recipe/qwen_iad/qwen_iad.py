@@ -490,9 +490,9 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
         iou_with_penalty = iou * size_penalty
         
         # print intersection and union
-        print(f"[DEBUG IOU]------------ Intersection: {intersection}, Union: {union}, IoU: {iou:.4f}, "
-              f"Pred_area: {pred_area:.0f}, GT_area: {gt_area:.0f}, Size_penalty: {size_penalty:.4f}, "
-              f"Final_IoU: {iou_with_penalty:.4f} ------------")
+        # print(f"[DEBUG IOU]------------ Intersection: {intersection}, Union: {union}, IoU: {iou:.4f}, "
+        #       f"Pred_area: {pred_area:.0f}, GT_area: {gt_area:.0f}, Size_penalty: {size_penalty:.4f}, "
+        #       f"Final_IoU: {iou_with_penalty:.4f} ------------")
         
         # Save comparison image of pred_mask and gt_mask_binary
         # try:
@@ -559,6 +559,7 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     1. Format reward: Hard reward (1.0 if no errors, 0.0 if any errors)
     2. Answer correctness reward: Hard reward (1.0 if match, 0.0 otherwise)
     3. Tool reward: Combination of tool usage (0.0 or 1.0) and bbox IoU
+       - Only valid when tool_call and tool_response counts match
 
     Args:
         data_source: Source of the data (not used currently)
@@ -571,203 +572,145 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     """
     import json
 
-    # 1. Format reward: Check tag pairing
+    # ============================================================================
+    # 1. FORMAT REWARD: Check tag pairing
+    # ============================================================================
     is_format_error = False
+    tags_to_check = [
+        ("<think>", "</think>"),
+        ("<tool_call>", "</tool_call>"),
+        ("<tool_response>", "</tool_response>"),
+        ("<answer>", "</answer>"),
+        ("<location>", "</location>"),
+        ("<type>", "</type>"),
+    ]
     
-    # Check <think> tags
-    count_think_1 = solution_str.count("<think>")
-    count_think_2 = solution_str.count("</think>")
-    if count_think_1 != count_think_2:
-        is_format_error = True
+    for open_tag, close_tag in tags_to_check:
+        if solution_str.count(open_tag) != solution_str.count(close_tag):
+            is_format_error = True
+            break
     
-    # Check <tool_call> and <tool_response> tags (only need pairing, not every turn has them)
-    count_tool_call_1 = solution_str.count("<tool_call>")
-    count_tool_call_2 = solution_str.count("</tool_call>")
-    if count_tool_call_1 != count_tool_call_2:
-        is_format_error = True
+    format_reward = 0.0 if is_format_error else 1.0
     
-    count_tool_response_1 = solution_str.count("<tool_response>")
-    count_tool_response_2 = solution_str.count("</tool_response>")
-    if count_tool_response_1 != count_tool_response_2:
-        is_format_error = True
-    
-    # Check <answer> tags
-    count_answer_1 = solution_str.count("<answer>")
-    count_answer_2 = solution_str.count("</answer>")
-    if count_answer_1 != count_answer_2:
-        is_format_error = True
-    
-    # Check <loc> tags (used instead of <location>)
-    count_loc_1 = solution_str.count("<location>")
-    count_loc_2 = solution_str.count("</location>")
-    if count_loc_1 != count_loc_2:
-        is_format_error = True
-    
-    # Check <type> tags
-    count_type_1 = solution_str.count("<type>")
-    count_type_2 = solution_str.count("</type>")
-    if count_type_1 != count_type_2:
-        is_format_error = True
-    
-    format_reward = 1.0 if not is_format_error else 0.0
-    
-    # 2. Extract answer and compute acc_reward
-    answer_text = ""
+    # ============================================================================
+    # 2. ANSWER REWARD: Check answer correctness
+    # ============================================================================
     answer_match = re.search(r"<answer>(.*?)</answer>", solution_str, re.DOTALL)
-    if answer_match:
-        answer_text = answer_match.group(1).strip()
-    
-    # Extract ground truth answer
+    answer_text = answer_match.group(1).strip() if answer_match else ""
     ground_truth_answer = _extract_ground_truth_answer(ground_truth, extra_info)
     
-    # Check if answer contains "yes" or "no" and matches ground_truth
+    acc_reward = 0.0
     if answer_text:
-        answer_normalized = answer_text.strip().lower()
-        ground_truth_normalized = ground_truth_answer.strip().lower()
+        answer_norm = answer_text.strip().lower()
+        gt_norm = ground_truth_answer.strip().lower()
         
-        # Check if ground_truth is "yes" or "no"
-        if "yes" in ground_truth_normalized:
-            acc_reward = 1.0 if "yes" in answer_normalized else 0.0
-        elif "no" in ground_truth_normalized:
-            acc_reward = 1.0 if "no" in answer_normalized else 0.0
+        if "yes" in gt_norm:
+            acc_reward = 1.0 if "yes" in answer_norm else 0.0
+        elif "no" in gt_norm:
+            acc_reward = 1.0 if "no" in answer_norm else 0.0
         else:
-            # Fallback to exact matching if ground_truth is not yes/no
-            acc_reward = 1.0 if answer_normalized == ground_truth_normalized else -1.0
-    else:
-        acc_reward = 0.0
+            acc_reward = 1.0 if answer_norm == gt_norm else -1.0
     
-    # 3. Tool reward: combination of tool usage, bbox IoU, zoom call count, and tool diversity bonus
-    # Part 1: Check if tools were called and detect tool types
-    has_tool_usage = count_tool_call_1 > 0
-    tool_usage_reward = 1.0 if has_tool_usage else 0.0
+    # ============================================================================
+    # 3. TOOL REWARD: Only valid when tool_call and tool_response counts match
+    # ============================================================================
+    count_tool_call = solution_str.count("<tool_call>")
+    count_tool_response = solution_str.count("<tool_response>")
+    has_valid_tool_usage = (count_tool_call == count_tool_response) and (count_tool_call > 0)
     
-    # Part 2: Compute bbox IoU from the LAST zoom call
-    # Also detect which tools were used and count zoom tool calls
+    # Initialize all tool-related rewards
     bbox_iou = 0.0
+    bbox_iou_transformed = 0.0
     tools_used = set()
     zoom_call_count = 0
+    tool_diversity_bonus = 0.0
+    zoom_count_reward = 0.0
+    tool_reward = 0.0
+    tool_valid_reward = 0.0
     
-    if has_tool_usage:
-        # Extract all tool calls
-        tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
-        tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
+    if not has_valid_tool_usage:
+        # Tool call/response counts don't match or no tool usage
+        logger.debug(f"Invalid tool usage: tool_call={count_tool_call}, tool_response={count_tool_response}")
+    else:
+        # Valid tool usage: extract and analyze tool calls
+        tool_calls = re.findall(r"<tool_call>(.*?)</tool_call>", solution_str, re.DOTALL)
         
-        # Detect all tools used and count zoom tool calls
+        # Parse tool calls to extract tool names and count zoom calls
         for tool_call_content in tool_calls:
             try:
                 tool_data = json.loads(tool_call_content.strip())
-                # Handle both list and dict formats
-                if isinstance(tool_data, list):
-                    for item in tool_data:
-                        if isinstance(item, dict):
-                            tool_name = item.get("tool_name") or item.get("name")
-                            if tool_name:
-                                tools_used.add(tool_name)
-                                if tool_name == "image_zoom_in_tool":
-                                    zoom_call_count += 1
-                elif isinstance(tool_data, dict):
-                    tool_name = tool_data.get("tool_name") or tool_data.get("name")
-                    if tool_name:
-                        tools_used.add(tool_name)
-                        if tool_name == "image_zoom_in_tool":
-                            zoom_call_count += 1
+                tool_items = tool_data if isinstance(tool_data, list) else [tool_data]
+                
+                for item in tool_items:
+                    if isinstance(item, dict):
+                        tool_name = item.get("tool_name") or item.get("name")
+                        if tool_name:
+                            tools_used.add(tool_name)
+                            if tool_name == "image_zoom_in_tool":
+                                zoom_call_count += 1
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
-        # Extract the LAST zoom bbox call for IoU calculation
+        # Extract last zoom bbox and compute IoU
         last_zoom_bbox = _extract_last_zoom_bbox(solution_str)
-        
-        pred_boxes = []
         if last_zoom_bbox:
-            # Get zoom_offsets from extra_info (passed from agent_loop)
             zoom_offsets = extra_info.get("zoom_offsets", []) if extra_info else []
             
-            # Transform the last bbox to original coordinate system using offsets
+            # Transform bbox to original coordinates if offsets exist
             if zoom_offsets:
-                transformed_bbox = _transform_bbox_with_offsets(last_zoom_bbox, zoom_offsets)
-                pred_boxes.append(transformed_bbox)
-                logger.debug(f"Transformed last bbox {last_zoom_bbox} to original coords: {transformed_bbox}")
+                pred_bbox = _transform_bbox_with_offsets(last_zoom_bbox, zoom_offsets)
+                logger.debug(f"Transformed bbox {last_zoom_bbox} -> {pred_bbox}")
             else:
-                # No zoom offsets (single zoom or legacy data), use bbox as-is
-                pred_boxes.append(last_zoom_bbox)
-                logger.debug(f"Using last bbox as-is (no offsets): {last_zoom_bbox}")
-        
-        if pred_boxes:
-            # Check if mask image is available in extra_info (only exists for defective samples)
-            gt_mask_bytes = None
-            if extra_info and isinstance(extra_info, dict) and "mask_image" in extra_info:
-                gt_mask_bytes = extra_info.get("mask_image")
+                pred_bbox = last_zoom_bbox
+                logger.debug(f"Using bbox as-is: {pred_bbox}")
             
-            # Determine which IoU calculation method to use
-            # Priority: mask-based IoU > bbox-based IoU
-            if gt_mask_bytes is not None and isinstance(gt_mask_bytes, bytes):
-                # Use mask-based IoU (more accurate for defective samples)
-                # NOTE: _compute_mask_iou applies _maybe_resize_bbox to match the actual
-                # bbox used by ImageZoomInTool, ensuring consistency in IoU calculation
-                bbox_iou = _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3) + 0.001
-                logger.debug(f"Using mask-based IoU: {bbox_iou:.4f}")
+            # Compute IoU with ground truth mask if available
+            gt_mask_bytes = extra_info.get("mask_image") if extra_info else None
+            if gt_mask_bytes and isinstance(gt_mask_bytes, bytes):
+                bbox_iou = _compute_mask_iou([pred_bbox], gt_mask_bytes, max_pred_boxes=3) + 0.001
+                logger.debug(f"Mask-based IoU: {bbox_iou:.4f}")
             else:
-                # Fallback case: Good samples (label=0) or legacy data without mask_image
-                # Provide base reward for tool usage
                 bbox_iou = 0.001
-                logger.debug("No mask image available, using base IoU reward")
+                logger.debug("No mask available, using base IoU")
+        
+        # Tool diversity bonus: reward using both zoom and reference tools
+        if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
+            tool_diversity_bonus = 0.1
+            logger.debug("Tool diversity bonus applied")
+        
+        # Zoom count reward: encourage exactly 2 zoom calls
+        if zoom_call_count == 1:
+            zoom_count_reward = 0.1
+        elif zoom_call_count == 2:
+            zoom_count_reward = 0.3
+        elif zoom_call_count > 2:
+            zoom_count_reward = -0.4
+        
+        logger.debug(f"Zoom calls: {zoom_call_count}, reward: {zoom_count_reward:.2f}")
+        
+        # Apply cube root transformation to IoU
+        bbox_iou_transformed = math.pow(bbox_iou, 1/3)
+        logger.debug(f"IoU: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (cube root)")
+        
+        # Calculate tool rewards
+        tool_reward = 2 * bbox_iou_transformed
+        
+        if acc_reward == 1.0 and zoom_count_reward > 0:
+            tool_valid_reward = 0.5
+        elif acc_reward == 0.0 and zoom_count_reward > 0:
+            tool_valid_reward = -0.4
     
-    # Part 3: Tool diversity bonus
-    # Give extra reward if both tools were used
-    tool_diversity_bonus = 0.0
-    if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
-        tool_diversity_bonus = 0.1
-        logger.debug("Tool diversity bonus: both zoom and reference tools used")
+    # ============================================================================
+    # 4. FINAL SCORE
+    # ============================================================================
+    final_score = 0.3 * format_reward + acc_reward + tool_valid_reward + tool_reward
     
-    # Part 4: Zoom call count reward
-    # Encourage exactly 2 zoom tool calls for better inspection
-    zoom_count_reward = 0.0
-    if zoom_call_count == 0:
-        zoom_count_reward = 0.0  # No penalty if no zoom (might be a good sample)
-    elif zoom_call_count == 1:
-        zoom_count_reward = 0.1  # Small reward for at least trying
-    elif zoom_call_count == 2:
-        zoom_count_reward = 0.3  # Best reward for exactly 2 calls
-    else:
-        zoom_count_reward = -0.4  # Penalty for more than 3 calls (excessive)
-    
-    logger.debug(f"Zoom call count: {zoom_call_count}, reward: {zoom_count_reward:.4f}")
-    
-    # Apply cube root transformation to amplify small IoU differences
-    bbox_iou_transformed = math.pow(bbox_iou, 1/3)
-    logger.debug(f"IoU transformation: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (cube root)")
-    
-    # Combined tool reward
-    # tool_reward = 0.2 * tool_usage_reward + 5 * bbox_iou_transformed + tool_diversity_bonus + zoom_count_reward
-    
-    tool_reward = 2 * bbox_iou_transformed
-    tool_valid_reward = 0.0
-    if acc_reward == 1.0 and zoom_count_reward > 0:
-        tool_valid_reward = 0.5
-    elif acc_reward == 0.0 and zoom_count_reward > 0:
-        tool_valid_reward = -0.4
-    else:
-        tool_valid_reward = 0.0
-    # Final score calculation
-    # Weighted combination: format (0.5), acc (1.0), tool (0-5.1)
-    # if epoch < 2
-    # final_score = 0.3 * format_reward +  acc_reward +  tool_reward + 0.5 * tool_valid_reward
-    # elif epoch > 2
-    final_score = 0.3 * format_reward +  acc_reward + tool_valid_reward + tool_reward
-    
-    
-    # Log for debugging
     logger.debug(
-        f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-        f"tool_usage={tool_usage_reward:.2f}, bbox_iou_raw={bbox_iou:.4f}, "
-        f"bbox_iou_transformed={bbox_iou_transformed:.4f}, "
-        f"tool_diversity_bonus={tool_diversity_bonus:.2f}, "
-        f"zoom_count={zoom_call_count}, zoom_count_reward={zoom_count_reward:.2f}, "
-        f"tool={tool_reward:.2f}, final={final_score:.2f}"
+        f"Score: format={format_reward:.2f}, acc={acc_reward:.2f}, "
+        f"tool={tool_reward:.2f}, tool_valid={tool_valid_reward:.2f}, "
+        f"final={final_score:.2f} | Tools: {tools_used}"
     )
-    logger.debug(f"Tools used: {tools_used}")
     
-    # Ensure all values are Python native types for JSON serialization
     return {
         "score": float(final_score),
         "format_reward": float(format_reward),
