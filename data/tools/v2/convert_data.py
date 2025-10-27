@@ -184,6 +184,57 @@ CATEGORY_KNOWLEDGE: dict[str, dict[str, Any]] = {
             "<image>.\nAnalyze this wood material for defects such as color inconsistency, holes, scratches, or liquid damage. Answer 'no' for good quality, 'yes' for defects.",
         ]
     },
+    # VISA Dataset Categories
+    "capsules": {
+        "description": "Medical or pharmaceutical capsule products with printed labels",
+        "common_defects": ["printing errors", "label defects", "color inconsistency", "deformation", "cracks"],
+        "inspection_focus": "label clarity, printing quality, shape integrity, surface defects",
+        "prompts": [
+            "<image>.\nInspect these capsules for printing defects, label errors, or deformation. Check if the printed information is clear and correct. Answer 'no' if perfect, 'yes' if defective.",
+            "<image>.\nExamine the capsules for any printing inconsistencies, color variations, cracks, or shape deformation. Verify label quality and clarity. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze these capsules for quality issues including printing defects, label problems, surface damage, or structural irregularities. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "macaroni1": {
+        "description": "Pasta products in macaroni form for food quality inspection",
+        "common_defects": ["broken pieces", "discoloration", "shape deformation", "foreign objects", "burnt areas"],
+        "inspection_focus": "shape uniformity, color consistency, structural integrity, contamination",
+        "prompts": [
+            "<image>.\nInspect this macaroni for broken pieces, discoloration, or shape deformation. Check for burnt areas or foreign objects. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine the macaroni products for any breaks, color inconsistencies, burnt sections, or contamination. Verify shape uniformity and proper color. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this macaroni for quality defects including broken pieces, discoloration, deformation, or foreign materials. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "pcb1": {
+        "description": "Printed Circuit Board (PCB) for electronic devices",
+        "common_defects": ["missing components", "solder defects", "trace damage", "short circuits", "component misalignment"],
+        "inspection_focus": "component presence, solder quality, trace integrity, alignment accuracy",
+        "prompts": [
+            "<image>.\nInspect this PCB for missing components, solder defects, or trace damage. Check component alignment and connection quality. Answer 'no' if correct, 'yes' if defective.",
+            "<image>.\nExamine the printed circuit board for any missing parts, soldering issues, damaged traces, or misaligned components. Verify all connections are proper. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this PCB for manufacturing defects including component issues, solder problems, trace damage, or assembly errors. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "pipe_fryum": {
+        "description": "Pipe-shaped fried snack food products",
+        "common_defects": ["broken pieces", "burnt areas", "discoloration", "deformation", "incomplete frying"],
+        "inspection_focus": "shape integrity, color uniformity, frying quality, structural completeness",
+        "prompts": [
+            "<image>.\nInspect this pipe fryum for broken pieces, burnt areas, or discoloration. Check the shape integrity and frying quality. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine the pipe-shaped snack for any breaks, burnt sections, color inconsistencies, or deformation. Verify proper frying and shape uniformity. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this pipe fryum for quality issues including broken pieces, burnt areas, discoloration, incomplete frying, or shape defects. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "fryum": {
+        "description": "Fried snack food products in various shapes",
+        "common_defects": ["broken pieces", "burnt areas", "discoloration", "deformation", "oil spots"],
+        "inspection_focus": "shape integrity, color uniformity, frying quality, surface defects",
+        "prompts": [
+            "<image>.\nInspect this fryum snack for broken pieces, burnt areas, or discoloration. Check the frying quality and shape integrity. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine the fried snack for any breaks, burnt sections, color inconsistencies, oil spots, or deformation. Verify proper frying and uniform appearance. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this fryum product for quality defects including broken pieces, burnt areas, discoloration, shape irregularities, or surface defects. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
 }
 
 # Generic fallback prompts for unknown categories

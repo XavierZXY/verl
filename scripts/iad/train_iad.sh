@@ -22,7 +22,7 @@ SAVE_CHECKPOINT_DIR=/home/takisobe@amd.com/zxy/models/verl_checkpoints
 # debug for new data
 # DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl/data/mvtec/moredata/train.parquet
 DATASET_TRAIN=/home/takisobe@amd.com/zxy/codes/verl-compare/data/data-v2/mvtec/train_cropped.parquet
-DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/moredata/test.parquet
+DATASET_VAL=/home/takisobe@amd.com/zxy/codes/verl/data/visa-2k/moredata/test-info.parquet
 REF_MODEL_PATH=/home/takisobe@amd.com/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
