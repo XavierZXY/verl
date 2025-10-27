@@ -356,38 +356,40 @@ def _extract_last_zoom_bbox(solution_str):
     return last_zoom_bbox
 
 
-def _transform_bbox_with_offsets(bbox, zoom_offsets):
-    """
-    Transform a bbox from a nested coordinate system to the original coordinate system.
-    
-    When zoom is called multiple times, each zoom crops the previous image, creating nested
-    coordinate systems. This function applies cumulative offsets to transform a bbox back
-    to the original image's coordinate system.
-    
-    Args:
-        bbox: Bbox in the final zoomed coordinate system [x1, y1, x2, y2]
-        zoom_offsets: List of (x_offset, y_offset) tuples from each zoom operation
-        
-    Returns:
-        Bbox in original coordinate system [x1, y1, x2, y2]
-    """
-    if not zoom_offsets:
-        return bbox
-    
-    # Accumulate all offsets
-    cumulative_x = sum(offset[0] for offset in zoom_offsets)
-    cumulative_y = sum(offset[1] for offset in zoom_offsets)
-    
-    # Transform bbox by adding cumulative offsets
-    transformed_bbox = [
-        bbox[0] + cumulative_x,
-        bbox[1] + cumulative_y,
-        bbox[2] + cumulative_x,
-        bbox[3] + cumulative_y,
-    ]
-    
-    logger.debug(f"Transformed bbox {bbox} with {len(zoom_offsets)} offsets to {transformed_bbox}")
-    return transformed_bbox
+# NOTE: This function is no longer needed as all zooms are now performed on the original image
+# (no nested coordinate systems, no cumulative offsets)
+# def _transform_bbox_with_offsets(bbox, zoom_offsets):
+#     """
+#     Transform a bbox from a nested coordinate system to the original coordinate system.
+#     
+#     When zoom is called multiple times, each zoom crops the previous image, creating nested
+#     coordinate systems. This function applies cumulative offsets to transform a bbox back
+#     to the original image's coordinate system.
+#     
+#     Args:
+#         bbox: Bbox in the final zoomed coordinate system [x1, y1, x2, y2]
+#         zoom_offsets: List of (x_offset, y_offset) tuples from each zoom operation
+#         
+#     Returns:
+#         Bbox in original coordinate system [x1, y1, x2, y2]
+#     """
+#     if not zoom_offsets:
+#         return bbox
+#     
+#     # Accumulate all offsets
+#     cumulative_x = sum(offset[0] for offset in zoom_offsets)
+#     cumulative_y = sum(offset[1] for offset in zoom_offsets)
+#     
+#     # Transform bbox by adding cumulative offsets
+#     transformed_bbox = [
+#         bbox[0] + cumulative_x,
+#         bbox[1] + cumulative_y,
+#         bbox[2] + cumulative_x,
+#         bbox[3] + cumulative_y,
+#     ]
+#     
+#     logger.debug(f"Transformed bbox {bbox} with {len(zoom_offsets)} offsets to {transformed_bbox}")
+#     return transformed_bbox
 
 
 def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
@@ -652,17 +654,12 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 pass
         
         # Extract last zoom bbox and compute IoU
+        # Note: All zoom bboxes are now on the original image (no coordinate transformation needed)
         last_zoom_bbox = _extract_last_zoom_bbox(solution_str)
         if last_zoom_bbox:
-            zoom_offsets = extra_info.get("zoom_offsets", []) if extra_info else []
-            
-            # Transform bbox to original coordinates if offsets exist
-            if zoom_offsets:
-                pred_bbox = _transform_bbox_with_offsets(last_zoom_bbox, zoom_offsets)
-                logger.debug(f"Transformed bbox {last_zoom_bbox} -> {pred_bbox}")
-            else:
-                pred_bbox = last_zoom_bbox
-                logger.debug(f"Using bbox as-is: {pred_bbox}")
+            # Bbox is already in original image coordinates (no transformation needed)
+            pred_bbox = last_zoom_bbox
+            logger.debug(f"Using zoom bbox on original image: {pred_bbox}")
             
             # Compute IoU with ground truth mask if available
             gt_mask_bytes = extra_info.get("mask_image") if extra_info else None

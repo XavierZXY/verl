@@ -52,30 +52,180 @@ SYSTEM_PROMPT: str = (
     '4.  `<answer></answer>`: Conclude with "No. There is no defect detected.".'
 )
 
-# Multiple instruction prompt variants for data diversity
-INSTRUCTION_PROMPTS: list[str] = [
+# Category-specific prior knowledge and instruction prompts
+CATEGORY_KNOWLEDGE: dict[str, dict[str, Any]] = {
+    "bottle": {
+        "description": "Glass or plastic bottles used in beverage packaging",
+        "common_defects": ["broken/cracks", "contamination", "surface damage"],
+        "inspection_focus": "surface integrity, cracks, foreign particles",
+        "prompts": [
+            "<image>.\nInspect this bottle for any cracks, breaks, or contamination. Check the surface carefully for structural damage. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine this bottle image for manufacturing defects such as cracks, broken parts, or contamination on the surface. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze the bottle for structural integrity. Look for cracks, breaks, or any foreign particles. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "cable": {
+        "description": "Electrical cables with wires and insulation",
+        "common_defects": ["bent wire", "cable swap", "cut insulation", "missing components", "poke damage"],
+        "inspection_focus": "wire alignment, insulation integrity, cable configuration",
+        "prompts": [
+            "<image>.\nCheck this cable for bent wires, damaged insulation, or missing components. Verify proper cable configuration. Answer 'no' if correct, 'yes' if defective.",
+            "<image>.\nInspect the cable for wire damage, insulation cuts, or incorrect assembly. Look for bent, missing, or swapped components. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nExamine this cable carefully for any wire bending, insulation damage, or missing parts. Check if all components are properly assembled. Answer 'no' for good, 'yes' for defects.",
+        ]
+    },
+    "capsule": {
+        "description": "Pharmaceutical capsules or pill containers",
+        "common_defects": ["crack", "faulty imprint", "poke damage", "scratch", "squeeze deformation"],
+        "inspection_focus": "surface smoothness, imprint quality, structural integrity",
+        "prompts": [
+            "<image>.\nInspect this capsule for cracks, scratches, faulty imprints, or deformation. Check the surface and printing quality. Answer 'no' if perfect, 'yes' if defective.",
+            "<image>.\nExamine the capsule for any cracks, poke marks, scratches, or squeeze damage. Verify the imprint is clear and correct. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this capsule for surface defects including cracks, scratches, or deformation. Check if the imprint is properly applied. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "carpet": {
+        "description": "Textile carpets or fabric materials",
+        "common_defects": ["color variation", "cuts", "holes", "metal contamination", "thread issues"],
+        "inspection_focus": "color uniformity, surface integrity, foreign objects",
+        "prompts": [
+            "<image>.\nInspect this carpet for color variations, cuts, holes, or foreign objects like metal contamination. Check thread quality. Answer 'no' if normal, 'yes' if defective.",
+            "<image>.\nExamine the carpet surface for any cuts, holes, discoloration, or thread defects. Look for metal particles or other contamination. Reply 'no' if clean, 'yes' if defects present.",
+            "<image>.\nAnalyze this carpet for manufacturing defects such as color inconsistency, surface damage, holes, or thread issues. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "grid": {
+        "description": "Metal or plastic grid patterns",
+        "common_defects": ["bent", "broken", "glue residue", "metal contamination", "thread damage"],
+        "inspection_focus": "grid alignment, structural integrity, surface cleanliness",
+        "prompts": [
+            "<image>.\nCheck this grid for bent or broken sections, glue residue, or contamination. Verify the grid pattern is uniform and intact. Answer 'no' if correct, 'yes' if defective.",
+            "<image>.\nInspect the grid structure for any bending, breaks, or foreign materials. Look for glue marks or metal contamination. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nExamine this grid for structural defects, including bent or broken sections, and surface contamination. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "hazelnut": {
+        "description": "Hazelnut nuts for quality inspection",
+        "common_defects": ["crack", "cut", "hole", "print marks"],
+        "inspection_focus": "shell integrity, surface damage, holes",
+        "prompts": [
+            "<image>.\nInspect this hazelnut for cracks, cuts, holes, or printing defects. Check the shell surface carefully. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine the hazelnut shell for any cracks, cuts, holes, or surface marks. Look for structural damage. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this hazelnut for shell defects including cracks, cuts, or holes. Check for any abnormal marks. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "leather": {
+        "description": "Leather material for manufacturing",
+        "common_defects": ["color variation", "cuts", "folds", "glue marks", "poke damage"],
+        "inspection_focus": "surface smoothness, color uniformity, structural integrity",
+        "prompts": [
+            "<image>.\nInspect this leather for color variations, cuts, folds, or glue marks. Check for poke damage or surface irregularities. Answer 'no' if smooth, 'yes' if defective.",
+            "<image>.\nExamine the leather surface for any cuts, folds, discoloration, glue residue, or poke marks. Look for texture abnormalities. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this leather material for defects such as color inconsistency, cuts, folds, or surface damage. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "pill": {
+        "description": "Pharmaceutical pills or tablets",
+        "common_defects": ["scratches", "surface damage"],
+        "inspection_focus": "surface smoothness, coating integrity",
+        "prompts": [
+            "<image>.\nInspect this pill for scratches or surface damage. Check the coating and overall appearance. Answer 'no' if smooth, 'yes' if defective.",
+            "<image>.\nExamine the pill surface for any scratches, chips, or coating defects. Look for irregularities. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this pill for surface defects including scratches or damage to the coating. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "screw": {
+        "description": "Metal screws or fasteners",
+        "common_defects": ["manipulated front", "head scratches", "neck scratches", "thread damage"],
+        "inspection_focus": "thread integrity, head condition, surface scratches",
+        "prompts": [
+            "<image>.\nInspect this screw for scratches on the head or neck, thread damage, or front manipulation. Check all screw components. Answer 'no' if intact, 'yes' if defective.",
+            "<image>.\nExamine the screw for any scratches, thread defects, or manipulation marks. Look at the head, neck, and threaded portions. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this screw for manufacturing defects including scratches, thread damage, or deformation. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "tile": {
+        "description": "Ceramic or floor tiles",
+        "common_defects": ["cracks", "glue strips", "gray strokes", "oil stains", "rough surface"],
+        "inspection_focus": "surface smoothness, cracks, stains, texture uniformity",
+        "prompts": [
+            "<image>.\nInspect this tile for cracks, glue residue, stains, or surface roughness. Check for gray strokes or oil marks. Answer 'no' if smooth, 'yes' if defective.",
+            "<image>.\nExamine the tile surface for any cracks, glue strips, discoloration, oil stains, or rough patches. Look for texture irregularities. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this tile for defects such as cracks, surface contamination, rough areas, or glue marks. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "toothbrush": {
+        "description": "Toothbrush products",
+        "common_defects": ["defective bristles", "handle damage", "assembly issues"],
+        "inspection_focus": "bristle quality, handle integrity, overall assembly",
+        "prompts": [
+            "<image>.\nInspect this toothbrush for defective bristles, handle damage, or assembly issues. Check the overall product quality. Answer 'no' if correct, 'yes' if defective.",
+            "<image>.\nExamine the toothbrush for any defects in bristles, handle, or assembly. Look for manufacturing irregularities. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this toothbrush for quality issues including bristle defects, handle damage, or assembly problems. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "transistor": {
+        "description": "Electronic transistor components",
+        "common_defects": ["bent leads", "cut leads", "damaged case", "misplacement"],
+        "inspection_focus": "lead alignment, case integrity, component positioning",
+        "prompts": [
+            "<image>.\nInspect this transistor for bent or cut leads, damaged case, or misplacement. Check lead alignment and case condition. Answer 'no' if correct, 'yes' if defective.",
+            "<image>.\nExamine the transistor for any lead damage, case cracks, or incorrect positioning. Look for bent, cut, or misaligned components. Reply 'no' if normal, 'yes' if defects found.",
+            "<image>.\nAnalyze this transistor for manufacturing defects including lead issues, case damage, or placement errors. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+    "wood": {
+        "description": "Wood material or wooden products",
+        "common_defects": ["color variation", "combined defects", "holes", "liquid stains", "scratches"],
+        "inspection_focus": "surface smoothness, color uniformity, holes, stains",
+        "prompts": [
+            "<image>.\nInspect this wood for color variations, holes, scratches, or liquid stains. Check the surface texture and uniformity. Answer 'no' if smooth, 'yes' if defective.",
+            "<image>.\nExamine the wood surface for any holes, scratches, discoloration, or staining. Look for texture irregularities or combined defects. Reply 'no' if normal, 'yes' if defects present.",
+            "<image>.\nAnalyze this wood material for defects such as color inconsistency, holes, scratches, or liquid damage. Answer 'no' for good quality, 'yes' for defects.",
+        ]
+    },
+}
+
+# Generic fallback prompts for unknown categories
+GENERIC_INSTRUCTION_PROMPTS: list[str] = [
     "<image>.\nAnalyze this image for defects. If there is no defect, answer 'no'. If there is defect, answer 'yes'.",
     "<image>.\nExamine this image carefully and determine whether any defects are present. Respond with 'no' if defect-free, 'yes' if defects are found.",
     "<image>.\nInspect this image for any quality issues or anomalies. Answer 'no' for normal items, 'yes' for defective items.",
     "<image>.\nPlease evaluate this image to identify any manufacturing defects. Reply 'no' if the item is good, 'yes' if there are defects.",
     "<image>.\nLook at this image and assess whether there are any flaws or irregularities. Answer 'no' if perfect, 'yes' if imperfect.",
-    "<image>.\nReview this image for defect detection. Provide 'no' if the object appears normal, 'yes' if abnormalities are detected.",
-    "<image>.\nCheck this image for any signs of damage or defects. Respond 'no' for intact items, 'yes' for damaged items.",
-    "<image>.\nAnalyze the quality of the object in this image. Answer 'no' if it meets quality standards, 'yes' if it has defects.",
-    "<image>.\nExamine this image to determine if the item has any defects or quality issues. Reply 'no' if acceptable, 'yes' if unacceptable.",
-    "<image>.\nInspect this image and identify whether any defects are visible. Answer 'no' for defect-free objects, 'yes' for defective objects.",
 ]
 
 
-def get_random_instruction_prompt() -> tuple[str, int]:
+def get_category_specific_prompt(clsname: Optional[str]) -> tuple[str, int]:
     """
-    Get a random instruction prompt from the available variants.
+    Get a category-specific instruction prompt based on the class name.
+
+    Args:
+        clsname: The class name (e.g., 'bottle', 'cable', etc.)
 
     Returns:
         tuple: (selected_prompt, prompt_index)
     """
-    prompt_index = random.randint(0, len(INSTRUCTION_PROMPTS) - 1)
-    return INSTRUCTION_PROMPTS[prompt_index], prompt_index
+    if clsname and clsname in CATEGORY_KNOWLEDGE:
+        prompts = CATEGORY_KNOWLEDGE[clsname]["prompts"]
+        prompt_index = random.randint(0, len(prompts) - 1)
+        return prompts[prompt_index], prompt_index
+    else:
+        # Fallback to generic prompts
+        prompt_index = random.randint(0, len(GENERIC_INSTRUCTION_PROMPTS) - 1)
+        return GENERIC_INSTRUCTION_PROMPTS[prompt_index], prompt_index
+
+
+def get_random_instruction_prompt() -> tuple[str, int]:
+    """
+    Get a random instruction prompt from the generic variants.
+    Kept for backward compatibility.
+
+    Returns:
+        tuple: (selected_prompt, prompt_index)
+    """
+    prompt_index = random.randint(0, len(GENERIC_INSTRUCTION_PROMPTS) - 1)
+    return GENERIC_INSTRUCTION_PROMPTS[prompt_index], prompt_index
 
 
 @dataclass
@@ -322,8 +472,9 @@ def convert(
             except Exception as e:
                 log.warning(f"[{idx}] Failed to read good reference image {good_img_path}: {e}")
 
-        # Get random instruction prompt for data diversity
-        selected_instruction_prompt, prompt_index = get_random_instruction_prompt()
+        # Get category-specific instruction prompt based on class name
+        clsname = item.get("clsname")
+        selected_instruction_prompt, prompt_index = get_category_specific_prompt(clsname)
 
         prompt = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -333,14 +484,24 @@ def convert(
 
         reward_model = _reward_model_value(item)
 
+        # Add category knowledge to extra_info if available
+        category_info = {}
+        if clsname and clsname in CATEGORY_KNOWLEDGE:
+            category_info = {
+                "category_description": CATEGORY_KNOWLEDGE[clsname]["description"],
+                "common_defects": CATEGORY_KNOWLEDGE[clsname]["common_defects"],
+                "inspection_focus": CATEGORY_KNOWLEDGE[clsname]["inspection_focus"],
+            }
+
         extra_info = {
             "answer": reward_model["ground_truth"],
             "question": selected_instruction_prompt,
             "prompt_variant_index": prompt_index,
-            "clsname": item.get("clsname"),
+            "clsname": clsname,
             "label": item.get("label"),
             "type": item.get("label_name"),
             "index": write_index,
+            "category_knowledge": category_info,
         }
 
         # Add mask image to extra_info if available

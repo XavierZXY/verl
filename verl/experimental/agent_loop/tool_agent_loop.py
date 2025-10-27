@@ -62,15 +62,13 @@ class AgentData:
         self.interaction = interaction
         self.interaction_kwargs = interaction_kwargs or {}
 
-        # Save original image for tracking and current image for tool access
-        # Get the first image if it's a list, otherwise use the image directly
+        # Save original image for both tracking and tool access
+        # All zoom operations are performed on the original image
         if image_data is not None:
             if isinstance(image_data, list) and len(image_data) > 0:
                 self.original_image = image_data[0]
-                self.current_image = image_data[0]  # Start with original, update after each zoom
             else:
                 self.original_image = image_data
-                self.current_image = image_data  # Start with original, update after each zoom
             logger.info(
                 f"[DEBUG] AgentData initialized with original_image: type={type(self.original_image)}, "
                 f"is_PIL={hasattr(self.original_image, 'size')}, "
@@ -78,7 +76,6 @@ class AgentData:
             )
         else:
             self.original_image = None
-            self.current_image = None
             logger.info(f"[DEBUG] AgentData initialized with original_image=None")
 
         # State variables
@@ -97,8 +94,9 @@ class AgentData:
         # Multi-turn conversation tracking for logging
         self.conversation_history: list[dict[str, Any]] = []
         
-        # Zoom tracking for coordinate transformation
-        self.zoom_offsets: list[tuple[float, float]] = []  # List of (x_offset, y_offset) from each zoom call
+        # Zoom tracking: record each zoom bbox for reward calculation
+        # Note: All zooms are on the original image, so these are independent bboxes (not cumulative offsets)
+        self.zoom_bboxes: list[list[float]] = []  # List of zoom bboxes on original image
 
 
 @register("tool_agent")
@@ -222,7 +220,7 @@ class ToolAgentLoop(AgentLoopBase):
                 "turn_scores": agent_data.turn_scores,
                 "tool_rewards": agent_data.tool_rewards,
                 "conversation_history": agent_data.conversation_history,
-                "zoom_offsets": agent_data.zoom_offsets,  # For coordinate transformation in reward calculation
+                "zoom_bboxes": agent_data.zoom_bboxes,  # All zoom bboxes on original image for reward calculation
             }
         )
         return output
@@ -242,12 +240,11 @@ class ToolAgentLoop(AgentLoopBase):
             )
             # Always use original_image to maintain consistent vision token counts across turns
             # (Qwen2-VL generates different token counts for different image sizes)
-            # current_image is used only for zoom tool's progressive cropping
+            # All zooms are performed on the original image (multi-region exploration, not progressive zoom)
             image_for_generation = [agent_data.original_image] if agent_data.original_image is not None else None
             if image_for_generation:
                 logger.info(
-                    f"[PENDING] Using original_image for generation, size: {agent_data.original_image.size}, "
-                    f"current_image_size: {agent_data.current_image.size if agent_data.current_image else 'None'}"
+                    f"[PENDING] Using original_image for generation, size: {agent_data.original_image.size}"
                 )
             model_inputs = self.processor(text=[raw_prompt], images=image_for_generation, return_tensors="pt")
             agent_data.prompt_ids = model_inputs.pop("input_ids").squeeze(0).tolist()
@@ -272,13 +269,11 @@ class ToolAgentLoop(AgentLoopBase):
 
         # Always use original_image to maintain consistent vision token counts across turns
         # (Qwen2-VL generates different token counts for different image sizes)
-        # current_image is used only for zoom tool's progressive cropping
         image_for_generation = [agent_data.original_image] if agent_data.original_image is not None else None
         if image_for_generation:
             logger.info(
                 f"[GENERATING] Turn {agent_data.assistant_turns + 1}: Using original_image for generation, "
-                f"size: {agent_data.original_image.size}, "
-                f"current_image_size: {agent_data.current_image.size if agent_data.current_image else 'None'}"
+                f"size: {agent_data.original_image.size}, total_zoom_calls: {len(agent_data.zoom_bboxes)}"
             )
         
         with simple_timer("generate_sequences", agent_data.metrics):
@@ -512,33 +507,23 @@ class ToolAgentLoop(AgentLoopBase):
             kwargs = agent_data.tools_kwargs.get(tool_name, {})
             create_kwargs = kwargs.get("create_kwargs", {})
 
-            # For zoom tool, use current_image (which may be a cropped image from previous zoom)
-            # For other tools, use original_image
-            if tool_name == "image_zoom_in_tool":
-                if agent_data.current_image is not None:
-                    create_kwargs["image"] = agent_data.current_image
-            else:
-                # For other tools like image_reference_tool, use original image
-                if agent_data.original_image is not None:
-                    create_kwargs["image"] = agent_data.original_image
+            # Always use original_image for all tools
+            # This ensures all zoom operations are performed on the original image
+            if agent_data.original_image is not None:
+                create_kwargs["image"] = agent_data.original_image
 
             instance_id, _ = await tool.create(create_kwargs=create_kwargs)
             tool_execution_response, tool_reward, res = await tool.execute(instance_id, tool_args)
             
-            # If this is a zoom tool and it succeeded, update current_image and track offset
+            # If this is a zoom tool and it succeeded, record the zoom bbox
             if tool_name == "image_zoom_in_tool" and res.get("success", False):
-                # The cropped image is in tool_execution_response.image
-                if tool_execution_response.image:
-                    if isinstance(tool_execution_response.image, list):
-                        agent_data.current_image = tool_execution_response.image[0]
-                    else:
-                        agent_data.current_image = tool_execution_response.image
-                    logger.info(f"Updated current_image after zoom, new size: {agent_data.current_image.size}")
-                
-                # Track the offset for coordinate transformation
-                offset = res.get("offset", [0.0, 0.0])
-                agent_data.zoom_offsets.append((float(offset[0]), float(offset[1])))
-                logger.info(f"Recorded zoom offset: {offset}, total offsets: {len(agent_data.zoom_offsets)}")
+                # Record the bbox used for this zoom (on original image coordinates)
+                bbox_used = res.get("bbox_used", tool_args.get("bbox_2d", []))
+                agent_data.zoom_bboxes.append([float(v) for v in bbox_used])
+                logger.info(
+                    f"Recorded zoom bbox on original image: {bbox_used}, "
+                    f"total zoom calls: {len(agent_data.zoom_bboxes)}"
+                )
                 
         except Exception as e:
             logger.warning(f"Error when executing tool: {e}")
