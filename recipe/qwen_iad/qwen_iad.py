@@ -553,24 +553,389 @@ def _extract_ground_truth_answer(ground_truth, extra_info):
     return (answer or "").strip()
 
 
+def _extract_all_zoom_bboxes(solution_str):
+    """
+    Extract ALL image_zoom_in_tool bbox calls from the solution in order.
+    
+    Args:
+        solution_str: The model's solution string
+        
+    Returns:
+        List of bbox coordinates [[x1, y1, x2, y2], ...] or empty list if no zoom calls
+    """
+    import json
+    
+    tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
+    tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
+    
+    all_zoom_bboxes = []
+    for tool_call_content in tool_calls:
+        try:
+            tool_data = json.loads(tool_call_content.strip())
+            
+            # Handle both list and dict formats
+            if isinstance(tool_data, dict):
+                tool_name = tool_data.get("tool_name") or tool_data.get("name")
+                if tool_name == "image_zoom_in_tool":
+                    args = tool_data.get("parameters", {}) or tool_data.get("arguments", {})
+                    bbox = args.get("bbox_2d") or args.get("bbox2d")
+                    if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                        all_zoom_bboxes.append([float(v) for v in bbox])
+            elif isinstance(tool_data, list):
+                for item in tool_data:
+                    if isinstance(item, dict):
+                        tool_name = item.get("tool_name") or item.get("name")
+                        if tool_name == "image_zoom_in_tool":
+                            args = item.get("parameters", {}) or item.get("arguments", {})
+                            bbox = args.get("bbox_2d") or args.get("bbox2d")
+                            if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                                all_zoom_bboxes.append([float(v) for v in bbox])
+        except (json.JSONDecodeError, ValueError, TypeError):
+            continue
+    
+    return all_zoom_bboxes
+
+
+def estimate_difficulty(gt_mask_bytes, image_width=None, image_height=None):
+    """
+    Estimate task difficulty based on defect size.
+    
+    Args:
+        gt_mask_bytes: Ground truth mask image bytes
+        image_width: Image width (optional, will be extracted from mask if not provided)
+        image_height: Image height (optional, will be extracted from mask if not provided)
+        
+    Returns:
+        float: Difficulty score in [0, 1] where 0=easy (large defect), 1=hard (small defect)
+    """
+    from io import BytesIO
+    import numpy as np
+    
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.warning("PIL not available, cannot estimate difficulty")
+        return 0.5
+    
+    if gt_mask_bytes is None or not isinstance(gt_mask_bytes, bytes):
+        return 0.5  # Default to medium difficulty
+    
+    try:
+        # Load mask and compute defect area
+        gt_mask_img = Image.open(BytesIO(gt_mask_bytes))
+        
+        if gt_mask_img.mode != 'L':
+            gt_mask_img = gt_mask_img.convert('L')
+        
+        gt_mask = np.array(gt_mask_img)
+        gt_mask_binary = (gt_mask > 127).astype(np.uint8)
+        
+        height, width = gt_mask_binary.shape
+        if image_width is None:
+            image_width = width
+        if image_height is None:
+            image_height = height
+        
+        gt_area = float(gt_mask_binary.sum())
+        image_area = float(image_width * image_height)
+        
+        if image_area == 0 or gt_area == 0:
+            return 0.5
+        
+        area_ratio = gt_area / image_area
+        
+        # Map area ratio to difficulty score [0, 1]
+        # <0.1% of image → very hard (1.0)
+        # 0.1%-1% → hard (0.7)
+        # 1%-5% → medium (0.4)
+        # >5% → easy (0.0-0.2)
+        if area_ratio < 0.001:
+            difficulty = 1.0
+        elif area_ratio < 0.01:
+            # Interpolate between 0.7 and 1.0
+            difficulty = 0.7 + 0.3 * (1 - (area_ratio - 0.001) / 0.009)
+        elif area_ratio < 0.05:
+            # Interpolate between 0.4 and 0.7
+            difficulty = 0.4 + 0.3 * (1 - (area_ratio - 0.01) / 0.04)
+        elif area_ratio < 0.1:
+            # Interpolate between 0.2 and 0.4
+            difficulty = 0.2 + 0.2 * (1 - (area_ratio - 0.05) / 0.05)
+        else:
+            difficulty = 0.2 * (1 - min((area_ratio - 0.1) / 0.1, 1.0))
+        
+        logger.debug(f"Difficulty estimation: area_ratio={area_ratio:.4f}, difficulty={difficulty:.2f}")
+        return difficulty
+        
+    except Exception as e:
+        logger.warning(f"Failed to estimate difficulty: {e}")
+        return 0.5
+
+
+def compute_acc_reward_adaptive(answer_correct, zoom_count, bbox_iou, 
+                                 gt_mask_bytes, image_width, image_height,
+                                 ground_truth_answer, training_progress=1.0):
+    """
+    Compute accuracy reward that is coupled with tool usage with curriculum learning.
+    Uses a hybrid strategy that encourages exploration early and quality later.
+    
+    Args:
+        answer_correct: Whether the answer is correct (bool)
+        zoom_count: Number of zoom tool calls
+        bbox_iou: IoU of the last/best zoom bbox with ground truth
+        gt_mask_bytes: Ground truth mask for difficulty estimation
+        image_width: Image width
+        image_height: Image height
+        ground_truth_answer: The ground truth answer string
+        training_progress: Training progress in [0, 1], where 0=start, 1=end (default 1.0)
+        
+    Returns:
+        float: Accuracy reward score, range depends on training progress
+        
+    Training stages:
+        - Early (0.0-0.3): Strong exploration bonus, low quality requirements
+        - Mid (0.3-0.6): Balanced exploration and quality
+        - Late (0.6-1.0): Strict quality requirements, no exploration bonus
+    """
+    # If answer is wrong, return penalty
+    if not answer_correct:
+        return -1.0
+    
+    # Answer is correct, now compute reward based on tool usage
+    difficulty = estimate_difficulty(gt_mask_bytes, image_width, image_height)
+    
+    # Special case: "no" answer (no defect) - negative samples
+    is_negative_sample = "no" in ground_truth_answer.lower()
+    
+    if is_negative_sample:
+        # For negative samples, not using zoom is acceptable
+        if zoom_count == 0:
+            return 0.7  # Allow not zooming for negative samples
+        else:
+            # Used zoom on negative sample - slight penalty for unnecessary exploration
+            return 0.6
+    
+    # Positive sample: defect exists, should use tools
+    if zoom_count == 0:
+        # No zoom on positive sample: increasingly strict penalty
+        # Early: -0.15, Mid: -0.30, Late: 0.0 (complete failure)
+        penalty_factor = 0.5 + 0.5 * training_progress
+        base_reward = 0.3 * (1 - penalty_factor)
+        
+        logger.debug(
+            f"No zoom on positive sample: progress={training_progress:.2f}, "
+            f"penalty_factor={penalty_factor:.2f}, reward={base_reward:.2f}"
+        )
+        return base_reward
+    
+    # Has zoom: compute quality-based reward
+    # Base reward for attempting to use tools
+    base = 0.5
+    
+    # Exploration bonus: decreases with training progress
+    # Early: 0.2, Mid: 0.1, Late: 0.0
+    if training_progress < 0.3:
+        exploration_bonus = 0.5
+        logger.debug(f"Early stage: exploration_bonus={exploration_bonus:.2f}")
+    elif training_progress < 0.6:
+        exploration_bonus = 0.2
+        logger.debug(f"Mid stage: exploration_bonus={exploration_bonus:.2f}")
+    else:
+        exploration_bonus = 0.0
+        logger.debug(f"Late stage: exploration_bonus={exploration_bonus:.2f}")
+    
+    # Determine optimal zoom count based on task difficulty
+    if difficulty < 0.3:
+        optimal_count = 1  # Easy task
+    elif difficulty < 0.7:
+        optimal_count = 2  # Medium task
+    else:
+        optimal_count = 3  # Hard task
+    
+    # Count match score: penalize deviation from optimal
+    count_deviation = abs(zoom_count - optimal_count)
+    if count_deviation == 0:
+        count_score = 1.0
+    elif count_deviation == 1:
+        count_score = 0.8
+    elif count_deviation == 2:
+        count_score = 0.6
+    else:
+        count_score = 0.4
+    
+    # IoU quality score (cube root transformation for smoother gradient)
+    iou_score = math.pow(max(0.001, bbox_iou), 1/3)
+    
+    # Quality weight: increases with training progress
+    # Early: 0.3 (lenient), Mid: 0.4, Late: 0.5 (strict)
+    if training_progress < 0.3:
+        quality_weight = 0.3
+    elif training_progress < 0.6:
+        quality_weight = 0.4
+    else:
+        quality_weight = 0.5
+    
+    # Additional penalty for very low IoU (but less strict early on)
+    iou_threshold = 0.05 if training_progress < 0.3 else 0.1
+    if bbox_iou < iou_threshold and zoom_count > 0:
+        # Zoomed but completely missed the target
+        penalty_reward = 0.3 if training_progress < 0.3 else 0.2
+        logger.debug(
+            f"Very low IoU penalty: iou={bbox_iou:.3f}, threshold={iou_threshold:.2f}, "
+            f"reward={penalty_reward:.2f}"
+        )
+        return penalty_reward
+    
+    # Combine all components
+    quality_reward = quality_weight * count_score * iou_score
+    total_reward = base + exploration_bonus + quality_reward
+    
+    # Cap at 1.0
+    total_reward = min(1.0, total_reward)
+    
+    logger.debug(
+        f"Adaptive acc reward: progress={training_progress:.2f}, difficulty={difficulty:.2f}, "
+        f"optimal_zoom={optimal_count}, actual_zoom={zoom_count}, "
+        f"count_score={count_score:.2f}, iou_score={iou_score:.2f}, "
+        f"quality_weight={quality_weight:.2f}, exploration_bonus={exploration_bonus:.2f}, "
+        f"total={total_reward:.2f}"
+    )
+    
+    return total_reward
+
+
+def compute_progressive_tool_reward(all_zoom_bboxes, gt_mask_bytes, zoom_count, tools_used):
+    """
+    Compute tool reward based on progressive improvement across all zoom calls.
+    
+    Args:
+        all_zoom_bboxes: List of all zoom bboxes in order
+        gt_mask_bytes: Ground truth mask bytes
+        zoom_count: Total number of zoom calls
+        tools_used: Set of tool names used
+        
+    Returns:
+        dict: Contains tool_reward and related metrics
+    """
+    # Initialize metrics
+    all_ious = []
+    improvements = []
+    tool_diversity_bonus = 0.0
+    process_reward = 0.0
+    result_reward = 0.0
+    efficiency_penalty = 0.0
+    ineffective_penalty = 0.0
+    
+    if zoom_count == 0:
+        return {
+            "tool_reward": 0.0,
+            "process_reward": 0.0,
+            "result_reward": 0.0,
+            "efficiency_penalty": 0.0,
+            "ineffective_penalty": 0.0,
+            "all_ious": [],
+            "improvements": [],
+        }
+    
+    # Compute IoU for each zoom
+    for i, bbox in enumerate(all_zoom_bboxes):
+        if gt_mask_bytes:
+            iou = _compute_mask_iou([bbox], gt_mask_bytes, max_pred_boxes=3)
+            all_ious.append(iou)
+        else:
+            all_ious.append(0.001)
+    
+    # Calculate improvements
+    for i in range(1, len(all_ious)):
+        improvement = all_ious[i] - all_ious[i-1]
+        improvements.append(improvement)
+    
+    # Process reward: progressive improvement with decay
+    DECAY_FACTOR = 0.7
+    for i, imp in enumerate(improvements):
+        if imp > 0:
+            decay = DECAY_FACTOR ** i
+            process_reward += imp * decay
+    
+    # Result reward: heavily weight the final IoU
+    final_iou = all_ious[-1] if all_ious else 0.001
+    final_iou_transformed = math.pow(max(0.001, final_iou), 1/3)
+    result_reward = 1.5 * final_iou_transformed
+    
+    # Efficiency penalty: each additional zoom has a cost
+    EFFICIENCY_COST = 0.08
+    if zoom_count > 1:
+        efficiency_penalty = EFFICIENCY_COST * (zoom_count - 1)
+    
+    # Ineffective zoom penalty: zoom that doesn't improve much
+    INEFFECTIVE_THRESHOLD = 0.02
+    INEFFECTIVE_PENALTY = 0.12
+    for imp in improvements:
+        if imp < INEFFECTIVE_THRESHOLD:
+            ineffective_penalty += INEFFECTIVE_PENALTY
+    
+    # Tool diversity bonus
+    if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
+        tool_diversity_bonus = 0.15
+    
+    # Total tool reward
+    tool_reward = (
+        process_reward + 
+        result_reward + 
+        tool_diversity_bonus - 
+        efficiency_penalty - 
+        ineffective_penalty
+    )
+    
+    logger.debug(
+        f"Progressive tool reward: process={process_reward:.3f}, result={result_reward:.3f}, "
+        f"diversity={tool_diversity_bonus:.2f}, efficiency_penalty={efficiency_penalty:.3f}, "
+        f"ineffective_penalty={ineffective_penalty:.3f}, total={tool_reward:.3f}"
+    )
+    logger.debug(f"All IoUs: {[f'{iou:.3f}' for iou in all_ious]}")
+    logger.debug(f"Improvements: {[f'{imp:+.3f}' for imp in improvements]}")
+    
+    return {
+        "tool_reward": tool_reward,
+        "process_reward": process_reward,
+        "result_reward": result_reward,
+        "efficiency_penalty": efficiency_penalty,
+        "ineffective_penalty": ineffective_penalty,
+        "all_ious": all_ious,
+        "improvements": improvements,
+    }
+
+
 def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_info=None) -> float:
     """
-    Compute reward score for defect detection task.
+    Compute reward score for defect detection task (Adaptive Version with Progressive Tool Rewards).
 
     The score consists of three components:
     1. Format reward: Hard reward (1.0 if no errors, 0.0 if any errors)
-    2. Answer correctness reward: Hard reward (1.0 if match, 0.0 otherwise)
-    3. Tool reward: Combination of tool usage (0.0 or 1.0) and bbox IoU
-       - Only valid when tool_call and tool_response counts match
+    2. Adaptive accuracy reward: Coupled with tool usage quality and task difficulty
+       - Requires effective tool usage to get full score
+       - Scales based on zoom count, IoU quality, and defect size
+       - Uses curriculum learning: encourages exploration early, quality later
+    3. Progressive tool reward: Tracks improvement across all zoom calls
+       - Rewards incremental improvements with exponential decay
+       - Penalizes ineffective zooms and over-exploration
 
     Args:
         data_source: Source of the data (not used currently)
         solution_str: Model's solution string
         ground_truth: Ground truth answer (can be dict or string)
-        extra_info: Additional information including question, bboxes, etc.
+        extra_info: Additional information including:
+            - mask_image: Ground truth mask bytes
+            - image_width, image_height: Image dimensions
+            - training_progress: Training progress in [0, 1] for curriculum learning
+                                 (0=early training, 1=late training, default=1.0)
 
     Returns:
         dict: Dictionary containing score and reward components
+        
+    Curriculum Learning Strategy:
+        - Early stage (progress < 0.3): Strong exploration bonus, lenient quality requirements
+        - Mid stage (0.3 <= progress < 0.6): Balanced exploration and quality
+        - Late stage (progress >= 0.6): Strict quality requirements, no exploration bonus
     """
     import json
 
@@ -595,40 +960,48 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
     format_reward = 0.0 if is_format_error else 1.0
     
     # ============================================================================
-    # 2. ANSWER REWARD: Check answer correctness
+    # 2. EXTRACT ANSWER AND CHECK CORRECTNESS
     # ============================================================================
     answer_match = re.search(r"<answer>(.*?)</answer>", solution_str, re.DOTALL)
     answer_text = answer_match.group(1).strip() if answer_match else ""
     ground_truth_answer = _extract_ground_truth_answer(ground_truth, extra_info)
     
-    acc_reward = 0.0
+    # Determine if answer is correct
+    answer_correct = False
     if answer_text:
         answer_norm = answer_text.strip().lower()
         gt_norm = ground_truth_answer.strip().lower()
         
         if "yes" in gt_norm:
-            acc_reward = 1.0 if "yes" in answer_norm else 0.0
+            answer_correct = "yes" in answer_norm
         elif "no" in gt_norm:
-            acc_reward = 1.0 if "no" in answer_norm else 0.0
+            answer_correct = "no" in answer_norm
         else:
-            acc_reward = 1.0 if answer_norm == gt_norm else -1.0
+            answer_correct = (answer_norm == gt_norm)
+    answer_acc = 1.0 if answer_correct else 0.0
     
     # ============================================================================
-    # 3. TOOL REWARD: Only valid when tool_call and tool_response counts match
+    # 3. EXTRACT TOOL USAGE AND COMPUTE IOUS
     # ============================================================================
     count_tool_call = solution_str.count("<tool_call>")
     count_tool_response = solution_str.count("<tool_response>")
     has_valid_tool_usage = (count_tool_call == count_tool_response) and (count_tool_call > 0)
     
-    # Initialize all tool-related rewards
-    bbox_iou = 0.0
-    bbox_iou_transformed = 0.0
+    # Initialize tool-related variables
     tools_used = set()
     zoom_call_count = 0
-    tool_diversity_bonus = 0.0
-    zoom_count_reward = 0.0
-    tool_reward = 0.0
-    tool_valid_reward = 0.0
+    all_zoom_bboxes = []
+    final_bbox_iou = 0.0
+    
+    # Extract ground truth mask and image dimensions
+    gt_mask_bytes = extra_info.get("mask_image") if extra_info else None
+    image_width = extra_info.get("image_width", 1024) if extra_info else 1024
+    image_height = extra_info.get("image_height", 1024) if extra_info else 1024
+    
+    # Extract training progress for curriculum learning
+    # Format: training_progress in [0, 1] where 0=start, 1=end
+    # Can be passed as: extra_info["training_progress"] = current_step / total_steps
+    training_progress = extra_info.get("training_progress", 1.0) if extra_info else 1.0
     
     if not has_valid_tool_usage:
         # Tool call/response counts don't match or no tool usage
@@ -653,70 +1026,77 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
         
-        # Extract last zoom bbox and compute IoU
-        # Note: All zoom bboxes are now on the original image (no coordinate transformation needed)
-        last_zoom_bbox = _extract_last_zoom_bbox(solution_str)
-        if last_zoom_bbox:
-            # Bbox is already in original image coordinates (no transformation needed)
-            pred_bbox = last_zoom_bbox
-            logger.debug(f"Using zoom bbox on original image: {pred_bbox}")
-            
-            # Compute IoU with ground truth mask if available
-            gt_mask_bytes = extra_info.get("mask_image") if extra_info else None
+        # Extract all zoom bboxes for progressive reward computation
+        all_zoom_bboxes = _extract_all_zoom_bboxes(solution_str)
+        
+        # Get final IoU (from last zoom)
+        if all_zoom_bboxes:
+            last_bbox = all_zoom_bboxes[-1]
             if gt_mask_bytes and isinstance(gt_mask_bytes, bytes):
-                bbox_iou = _compute_mask_iou([pred_bbox], gt_mask_bytes, max_pred_boxes=3) + 0.001
-                logger.debug(f"Mask-based IoU: {bbox_iou:.4f}")
+                final_bbox_iou = _compute_mask_iou([last_bbox], gt_mask_bytes, max_pred_boxes=3)
+                logger.debug(f"Final bbox IoU: {final_bbox_iou:.4f}")
             else:
-                bbox_iou = 0.001
+                final_bbox_iou = 0.001
                 logger.debug("No mask available, using base IoU")
-        
-        # Tool diversity bonus: reward using both zoom and reference tools
-        if "image_zoom_in_tool" in tools_used and "image_reference_tool" in tools_used:
-            tool_diversity_bonus = 0.1
-            logger.debug("Tool diversity bonus applied")
-        
-        # Zoom count reward: encourage exactly 2 zoom calls
-        if zoom_call_count == 1:
-            zoom_count_reward = 0.1
-        elif zoom_call_count == 2:
-            zoom_count_reward = 0.3
-        elif zoom_call_count > 2:
-            zoom_count_reward = -0.4
-        
-        logger.debug(f"Zoom calls: {zoom_call_count}, reward: {zoom_count_reward:.2f}")
-        
-        # Apply cube root transformation to IoU
-        bbox_iou_transformed = math.pow(bbox_iou, 1/3)
-        logger.debug(f"IoU: {bbox_iou:.4f} -> {bbox_iou_transformed:.4f} (cube root)")
-        
-        # Calculate tool rewards
-        tool_reward = 2 * bbox_iou_transformed
-        
-        if acc_reward == 1.0 and zoom_count_reward > 0:
-            tool_valid_reward = 0.5
-        elif acc_reward == 0.0 and zoom_count_reward > 0:
-            tool_valid_reward = -0.4
     
     # ============================================================================
-    # 4. FINAL SCORE
+    # 4. COMPUTE ADAPTIVE ACCURACY REWARD (coupled with tool usage)
     # ============================================================================
-    final_score = 0.3 * format_reward + acc_reward + tool_valid_reward + tool_reward
+    acc_reward = compute_acc_reward_adaptive(
+        answer_correct=answer_correct,
+        zoom_count=zoom_call_count,
+        bbox_iou=final_bbox_iou,
+        gt_mask_bytes=gt_mask_bytes,
+        image_width=image_width,
+        image_height=image_height,
+        ground_truth_answer=ground_truth_answer,
+        training_progress=training_progress
+    )
+    
+    # ============================================================================
+    # 5. COMPUTE PROGRESSIVE TOOL REWARD
+    # ============================================================================
+    tool_reward_dict = compute_progressive_tool_reward(
+        all_zoom_bboxes=all_zoom_bboxes,
+        gt_mask_bytes=gt_mask_bytes,
+        zoom_count=zoom_call_count,
+        tools_used=tools_used
+    )
+    
+    tool_reward = tool_reward_dict["tool_reward"]
+    process_reward = tool_reward_dict["process_reward"]
+    result_reward = tool_reward_dict["result_reward"]
+    efficiency_penalty = tool_reward_dict["efficiency_penalty"]
+    ineffective_penalty = tool_reward_dict["ineffective_penalty"]
+    all_ious = tool_reward_dict["all_ious"]
+    improvements = tool_reward_dict["improvements"]
+    
+    # ============================================================================
+    # 6. FINAL SCORE
+    # ============================================================================
+    # New formula: format + adaptive_acc + progressive_tool
+    final_score = 0.3 * format_reward + acc_reward + tool_reward
     
     logger.debug(
-        f"Score: format={format_reward:.2f}, acc={acc_reward:.2f}, "
-        f"tool={tool_reward:.2f}, tool_valid={tool_valid_reward:.2f}, "
-        f"final={final_score:.2f} | Tools: {tools_used}"
+        f"Score breakdown [progress={training_progress:.2f}]: "
+        f"format={format_reward:.2f}, acc_adaptive={acc_reward:.2f}, "
+        f"tool_total={tool_reward:.2f} (process={process_reward:.3f}, result={result_reward:.3f}, "
+        f"eff_penalty={efficiency_penalty:.3f}, ineff_penalty={ineffective_penalty:.3f}), "
+        f"final={final_score:.2f}"
     )
+    logger.debug(f"Tools used: {tools_used}, zoom_count={zoom_call_count}")
     
     return {
         "score": float(final_score),
         "format_reward": float(format_reward),
+        "answer_acc": float(answer_acc),
         "acc_reward": float(acc_reward),
         "tool_reward": float(tool_reward),
-        "bbox_iou": float(bbox_iou_transformed),
-        "tool_diversity_bonus": float(tool_diversity_bonus),
-        "zoom_count_reward": float(zoom_count_reward),
-        "tool_valid_reward": float(tool_valid_reward),
+        "process_reward": float(process_reward),
+        "result_reward": float(result_reward),
+        "efficiency_penalty": float(efficiency_penalty),
+        "ineffective_penalty": float(ineffective_penalty),
+        "training_progress": float(training_progress),
     }
 
 
