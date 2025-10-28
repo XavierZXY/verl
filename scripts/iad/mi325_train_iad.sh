@@ -7,7 +7,7 @@ export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-tool"
+PROJECT_NAME="iad-zoom"
 
 BASEDIR=/wekafs/takisobe/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
@@ -20,24 +20,27 @@ SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
 # DATASET_TRAIN=/wekafs/takisobe/zxy/codes/verl/data/mvtec/train/train_enhanced.parquet
 # DATASET_VAL=/wekafs/takisobe/zxy/codes/verl/data/visa-2k/test/test.parquet
 # debug for new data
-DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
-DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/test/test.parquet
+# DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
+DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/train.parquet
+DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/test.parquet
 REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
-TOTAL_EPOCHS=10
-BATCH_SIZE=16
-PPO_BATCH_SIZE=16
-MICRO_BATCH_SIZE=2
+TOTAL_EPOCHS=8
+BATCH_SIZE=32
+PPO_BATCH_SIZE=32
+MICRO_BATCH_SIZE=4
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.3
+ROLLOUT_UTIL=0.5
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
+SAVE_FREQ=40
+TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="TW-debug-mi325-new-data"
+EXPERIMENT_NAME="Best-resume-1800-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
@@ -91,13 +94,13 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.val_before_train=True \
     trainer.n_gpus_per_node=${N_GPUS_PER_NODE} \
     trainer.nnodes=${WORLD_SIZE} \
-    trainer.save_freq=20 \
-    trainer.test_freq=10 \
+    trainer.save_freq=${SAVE_FREQ} \
+    trainer.test_freq=${TEST_FREQ} \
     trainer.validation_data_dir=${BASEDIR}/logs/validation_data/${EXPERIMENT_NAME} \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXPERIMENT_NAME} \
     trainer.default_local_dir=${SAVE_CHECKPOINT_DIR}/${PROJECT_NAME}/${EXPERIMENT_NAME} \
     +trainer.tensorboard_dir=${SAVE_CHECKPOINT_DIR}/logs/tensorboard \
     +trainer.rl_logging_board_dir=${SAVE_CHECKPOINT_DIR}/logs/rl_logging_board \
-    trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \
     trainer.total_epochs=${TOTAL_EPOCHS} 2>&1 | tee ./logs/${EXPERIMENT_NAME}.log
+    # trainer.rollout_data_dir=${BASEDIR}/logs/rollout_data/${EXPERIMENT_NAME} \
