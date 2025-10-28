@@ -21,8 +21,8 @@ SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
 # DATASET_VAL=/wekafs/takisobe/zxy/codes/verl/data/visa-2k/test/test.parquet
 # debug for new data
 # DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
-DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/train.parquet
-DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/v2/test.parquet
+DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/1800/train.parquet
+DATASET_VAL=/wekafs/takisobe/zxy/datasets/qwen-iad/test/test.parquet
 REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
 # ---------------- Train config -----------------
 WORLD_SIZE=1
