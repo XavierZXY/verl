@@ -15,7 +15,6 @@ import io
 import logging
 import math
 import os
-import random
 import re
 
 import requests
@@ -36,7 +35,7 @@ SYSTEM_PROMPT: str = (
     "If you cannot confidently identify or locate a defect and require a closer view or you don't find the defect, you can try to use the tool to get more information,"
     " your response **MUST ONLY** contain these two tags:\n"
     "1.  **`<think></think>`**: Explain why you need to use a tool. For example, describe what you see and why it's ambiguous "
-    '(e.g., "I see a potential anomaly in the lower-right corner, but the resolution is too low to confirm if it\'s a crack or a shadow. '
+    "(e.g., \"I see a potential anomaly in the lower-right corner, but the resolution is too low to confirm if it's a crack or a shadow. "
     'I will use the zoom tool to inspect it.").\n'
     "2.  **`<tool_call></tool_call>`**: Provide the tool call needed to get more information.\n"
     "** Example of a Tool Request Turn:**\n"
@@ -55,10 +54,10 @@ SYSTEM_PROMPT: str = (
     '    - Must use "bbox2d" key with [x_min, y_min, x_max, y_max] coordinates.\n'
     "    - Maximum of 3 bounding boxes. You should always remember this rule.\n"
     '    - Example: [{"bbox2d": [100, 150, 200, 250]}]\n'
-    "3.  **`<type></type>`**: Specify the defect type from the list: \"crack\", \"discoloration\", \"scratch\", \"hole\", \"surface\", \"other\". "
+    '3.  **`<type></type>`**: Specify the defect type from the list: "crack", "discoloration", "scratch", "hole", "surface", "other". '
     'Use "unspecified" if uncertain.\n'
     '4.  **`<answer></answer>`**: Conclude with "yes".\n'
-    "** Example of a Final \"Defect Found\" Turn (after a tool was used):**\n"
+    '** Example of a Final "Defect Found" Turn (after a tool was used):**\n'
     "<think>The zoomed-in view from the tool confirms that the dark spot is a well-defined circular hole, not a smudge. "
     "I can now confidently mark its location and type.</think>\n"
     '[{"bbox2d": [265, 310, 280, 325]}]\n'
@@ -71,7 +70,7 @@ SYSTEM_PROMPT: str = (
     "2.  **`<location></location>`**: Provide an empty JSON list: [].\n"
     '3.  **`<type></type>`**: Use the value "good".\n'
     '4.  **`<answer></answer>`**: Conclude with "no".\n'
-    "** Example of a \"No Defect\" Turn:**\n"
+    '** Example of a "No Defect" Turn:**\n'
     "<think>I have thoroughly scanned the entire surface. The finish is uniform, and there are no signs of cracks, scratches, "
     "or any other anomalies. The object meets quality standards.</think>\n"
     "<location>[]</location>\n"
@@ -402,54 +401,55 @@ def _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3):
 def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
     """
     Compute IoU between predicted bboxes and ground truth mask image.
-    
+
     This function is called only when gt_mask_bytes is confirmed to be valid bytes data.
-    
+
     Args:
         pred_boxes: List of predicted bounding boxes in [x1, y1, x2, y2] format
         gt_mask_bytes: Bytes data of ground truth mask image (must not be None)
         max_pred_boxes: Maximum number of predicted boxes to consider
-        
+
     Returns:
         float: IoU score between 0 and 1
     """
     from io import BytesIO
+
     import numpy as np
-    
+
     try:
         from PIL import Image
     except ImportError:
         logger.error("PIL not available, cannot compute mask IoU")
         return 0.0
-    
+
     # Limit predicted boxes
     if len(pred_boxes) > max_pred_boxes:
         pred_boxes = pred_boxes[:max_pred_boxes]
-    
+
     # Handle empty prediction case
     if len(pred_boxes) == 0:
         # No predictions but there's a ground truth mask = penalty for missing detection
         logger.warning("No predicted boxes but ground truth mask exists")
         return 0.0
-    
+
     try:
         # Load ground truth mask image
         gt_mask_img = Image.open(BytesIO(gt_mask_bytes))
-        
+
         # Convert to grayscale if needed
-        if gt_mask_img.mode != 'L':
-            gt_mask_img = gt_mask_img.convert('L')
-        
+        if gt_mask_img.mode != "L":
+            gt_mask_img = gt_mask_img.convert("L")
+
         # Convert to numpy array and binarize
         gt_mask = np.array(gt_mask_img)
         gt_mask_binary = (gt_mask > 127).astype(np.uint8)
-        
+
         # Get image dimensions
         height, width = gt_mask_binary.shape
-        
+
         # Create prediction mask from bboxes
         pred_mask = np.zeros((height, width), dtype=np.uint8)
-        
+
         for box in pred_boxes:
             x1, y1, x2, y2 = box
             # Convert to integer coordinates and clip to image bounds
@@ -457,21 +457,21 @@ def _compute_mask_iou(pred_boxes, gt_mask_bytes, max_pred_boxes=3):
             y1 = int(max(0, min(height - 1, y1)))
             x2 = int(max(0, min(width, x2)))
             y2 = int(max(0, min(height, y2)))
-            
+
             # Fill the bbox region in prediction mask
             if x2 > x1 and y2 > y1:
                 pred_mask[y1:y2, x1:x2] = 1
-        
+
         # Compute IoU between prediction mask and ground truth mask
         intersection = np.logical_and(pred_mask, gt_mask_binary).sum()
         union = np.logical_or(pred_mask, gt_mask_binary).sum()
-        
+
         if union == 0:
             return 1.0 if intersection == 0 else 0.0
-        
+
         iou = float(intersection) / float(union)
         return iou
-        
+
     except Exception as e:
         logger.error(f"Failed to compute mask IoU: {e}")
         return 0.0
@@ -630,58 +630,58 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
 
     # 1. Format reward: Check tag pairing
     is_format_error = False
-    
+
     # Check <think> tags
     count_think_1 = solution_str.count("<think>")
     count_think_2 = solution_str.count("</think>")
     if count_think_1 != count_think_2:
         is_format_error = True
-    
+
     # Check <tool_call> and <tool_response> tags (only need pairing, not every turn has them)
     count_tool_call_1 = solution_str.count("<tool_call>")
     count_tool_call_2 = solution_str.count("</tool_call>")
     if count_tool_call_1 != count_tool_call_2:
         is_format_error = True
-    
+
     count_tool_response_1 = solution_str.count("<tool_response>")
     count_tool_response_2 = solution_str.count("</tool_response>")
     if count_tool_response_1 != count_tool_response_2:
         is_format_error = True
-    
+
     # Check <answer> tags
     count_answer_1 = solution_str.count("<answer>")
     count_answer_2 = solution_str.count("</answer>")
     if count_answer_1 != count_answer_2:
         is_format_error = True
-    
+
     # Check <loc> tags (used instead of <location>)
     count_loc_1 = solution_str.count("<location>")
     count_loc_2 = solution_str.count("</location>")
     if count_loc_1 != count_loc_2:
         is_format_error = True
-    
+
     # Check <type> tags
     count_type_1 = solution_str.count("<type>")
     count_type_2 = solution_str.count("</type>")
     if count_type_1 != count_type_2:
         is_format_error = True
-    
+
     format_reward = 1.0 if not is_format_error else 0.0
-    
+
     # 2. Extract answer and compute acc_reward
     answer_text = ""
     answer_match = re.search(r"<answer>(.*?)</answer>", solution_str, re.DOTALL)
     if answer_match:
         answer_text = answer_match.group(1).strip()
-    
+
     # Extract ground truth answer
     ground_truth_answer = _extract_ground_truth_answer(ground_truth, extra_info)
-    
+
     # Check if answer contains "yes" or "no" and matches ground_truth
     if answer_text:
         answer_normalized = answer_text.strip().lower()
         ground_truth_normalized = ground_truth_answer.strip().lower()
-        
+
         # Check if ground_truth is "yes" or "no"
         if "yes" in ground_truth_normalized:
             acc_reward = 1.0 if "yes" in answer_normalized else 0.0
@@ -692,19 +692,19 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
             acc_reward = 1.0 if answer_normalized == ground_truth_normalized else -1.0
     else:
         acc_reward = 0.0
-    
+
     # 3. Tool reward: combination of tool usage and bbox IoU
     # Part 1: Check if tools were called
     has_tool_usage = count_tool_call_1 > 0
     tool_usage_reward = 1.0 if has_tool_usage else 0.0
-    
+
     # Part 2: Compute bbox IoU from tool_call parameters or mask image
     bbox_iou = 0.0
     if has_tool_usage:
         # Extract bbox from the last tool_call only
         tool_call_pattern = r"<tool_call>(.*?)</tool_call>"
         tool_calls = re.findall(tool_call_pattern, solution_str, re.DOTALL)
-        
+
         pred_boxes = []
         # Only process the last tool_call
         if tool_calls:
@@ -719,13 +719,13 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                         pred_boxes.append([float(v) for v in bbox])
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
-        
+
         if pred_boxes:
             # Check if mask image is available in extra_info (only exists for defective samples)
             gt_mask_bytes = None
             if extra_info and isinstance(extra_info, dict) and "mask_image" in extra_info:
                 gt_mask_bytes = extra_info.get("mask_image")
-            
+
             # Determine which IoU calculation method to use
             # Priority: mask-based IoU > bbox-based IoU
             if gt_mask_bytes is not None and isinstance(gt_mask_bytes, bytes):
@@ -737,28 +737,28 @@ def compute_score(data_source: str, solution_str: str, ground_truth: str, extra_
                 # This handles two cases:
                 # 1. Good samples (label=0) without mask_image
                 # 2. Legacy data without mask_image field
-                
+
                 gt_boxes = _extract_gt_bboxes(ground_truth, extra_info)
                 bbox_iou = _improved_iou_reward(pred_boxes, gt_boxes, max_pred_boxes=3)
                 if gt_boxes:
                     logger.debug(f"Using bbox-based IoU with {len(gt_boxes)} GT boxes: {bbox_iou:.4f}")
                 else:
                     logger.debug(f"No GT boxes/mask found, IoU penalty: {bbox_iou:.4f}")
-    
+
     # Combined tool reward
-    tool_reward = 0.5 * tool_usage_reward + 0.5 * bbox_iou
-    
+    tool_reward = tool_usage_reward + 4 * bbox_iou
+
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5), tool (1.0)
-    final_score = 0.25 * format_reward + 0.25 * acc_reward + 0.5 * tool_reward
-    
+    final_score = 0.2 * format_reward + 0.3 * acc_reward + 0.1 * tool_reward
+
     # Log for debugging
     logger.debug(
         f"Score breakdown: format={format_reward:.2f}, acc={acc_reward:.2f}, "
         f"tool_usage={tool_usage_reward:.2f}, bbox_iou={bbox_iou:.2f}, "
         f"tool={tool_reward:.2f}, final={final_score:.2f}"
     )
-    
+
     return {
         "score": final_score,
         "format_reward": format_reward,
@@ -793,10 +793,19 @@ assistant
 <type>metal terminal</type>
 <answer>no</answer>"""
 
-    ground_truth_1 = {"answer": "no", "bboxes": [{"bbox_2d": [590, 670, 280, 700]}, {"bbox_2d": [590, 770, 280, 795]}]}
+    ground_truth_1 = {
+        "answer": "no",
+        "bboxes": [
+            {"bbox_2d": [590, 670, 280, 700]},
+            {"bbox_2d": [590, 770, 280, 795]},
+        ],
+    }
     extra_info_1 = {
         "question": "Does this image contain any defects?",
-        "bboxes": [{"bbox_2d": [590, 670, 280, 700]}, {"bbox_2d": [590, 770, 280, 795]}],
+        "bboxes": [
+            {"bbox_2d": [590, 670, 280, 700]},
+            {"bbox_2d": [590, 770, 280, 795]},
+        ],
     }
 
     print("=== Test Case 1: Well-formatted with valid tool calls ===")
@@ -843,7 +852,7 @@ After examining the image, I can see the surface is clean and smooth with no vis
     print(f"Score: {score3}")
     time_end = time.time()
     print(f"Time: {time_end - time_start}")
-    
+
     # Test case 4: Format error - missing tags
     test_case_4 = """<think>
 Let me check for defects.

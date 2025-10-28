@@ -40,7 +40,7 @@ GRAD_CLIP=1
 SAVE_FREQ=40
 TEST_FREQ=10
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Best-resume-1800-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="Best-resumev2-1800-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
