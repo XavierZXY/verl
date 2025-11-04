@@ -7,7 +7,7 @@ export LLM_AS_A_JUDGE_BASE="http://tw034:9091/v1"
 # load key from text file, the file is in the same directory as this script
 export WANDB_API_KEY=$(cat scripts/iad/wandb_key)
 export SWANLAB_API_KEY=$(cat scripts/iad/swanlab_key)
-PROJECT_NAME="iad-zoom"
+PROJECT_NAME="ir-qinsight"
 
 BASEDIR=/wekafs/takisobe/zxy/codes/verl
 SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
@@ -22,33 +22,33 @@ SAVE_CHECKPOINT_DIR=/wekafs/takisobe/zxy/models/verl_checkpoints
 # debug for new data
 # DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/train/train.parquet
 # DATASET_TRAIN=/wekafs/takisobe/zxy/datasets/qwen-iad/1800/train.parquet
-DATASET_TRAIN=/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000000.parquet
+DATASET_TRAIN="['/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000000.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000001.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000002.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000003.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000004.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000005.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000006.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000007.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000008.parquet', '/wekafs/takisobe/haisenhe/datasets/train3_random/shards/shard-train-000010.parquet']"
 DATASET_VAL=/wekafs/takisobe/haisenhe/datasets/test/test_parquet/Group_C/shard-test-000000.parquet
-REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Qwen2.5-VL-7B-Instruct
+REF_MODEL_PATH=/wekafs/takisobe/zxy/models/Q-Insight/score_degradation
 # ---------------- Train config -----------------
 WORLD_SIZE=1
 TOTAL_EPOCHS=8
-BATCH_SIZE=32
-PPO_BATCH_SIZE=32
-MICRO_BATCH_SIZE=4
+BATCH_SIZE=64
+PPO_BATCH_SIZE=64
+MICRO_BATCH_SIZE=8
 LR=1e-6
 LOG_PER_GPU_BATCH_SIZE=8
 ROLLOUT_PARALLELISM=1
-ROLLOUT_UTIL=0.5
+ROLLOUT_UTIL=0.3
 N_GPUS_PER_NODE=8
 N_ROLLOUT=8
 GRAD_CLIP=1
-SAVE_FREQ=40
-TEST_FREQ=10
+SAVE_FREQ=20
+TEST_FREQ=5
 # EXPERIMENT_NAME="TW-003-Tool-Mvtex-train-val-3B-lr${LR}-grad-clip${GRAD_CLIP}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}-grpo"
-EXPERIMENT_NAME="Best-resumev2-1800-mi325-rollout${N_ROLLOUT}-batch${BATCH_SIZE}-ppo${PPO_BATCH_SIZE}-micro${MICRO_BATCH_SIZE}"
+EXPERIMENT_NAME="debug-ir-notlong-answer-2048"
 
 # ---------------- Train config -----------------
 PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
-    --config-path=${BASEDIR}/recipe/qwen_iad/configs \
-    --config-name='qiad_multiturn_grpo' \
-    data.train_files=${DATASET_TRAIN} \
-    data.val_files=[${DATASET_VAL}] \
+    --config-path=${BASEDIR}/recipe/qwen_ir/configs \
+    --config-name='qwen_ir_multiturn_grpo' \
+    data.train_files="${DATASET_TRAIN}" \
+    data.val_files=${DATASET_VAL} \
     data.train_batch_size=${BATCH_SIZE} \
     data.max_prompt_length=8192 \
     data.max_response_length=16384 \
@@ -89,7 +89,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=4 \
     actor_rollout_ref.rollout.multi_turn.max_parallel_calls=1 \
-    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_iad/configs/image_zoom_in_tool_config.yaml \
+    actor_rollout_ref.rollout.multi_turn.tool_config_path=recipe/qwen_ir/configs/image_zoom_in_tool_config.yaml \
     trainer.critic_warmup=0 \
     trainer.logger=['wandb','swanlab','console'] \
     trainer.val_before_train=True \

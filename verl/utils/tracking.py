@@ -47,14 +47,24 @@ class Tracking:
         "file",
     ]
 
-    def __init__(self, project_name, experiment_name, default_backend: str | list[str] = "console", config=None):
+    def __init__(
+        self,
+        project_name,
+        experiment_name,
+        default_backend: str | list[str] = "console",
+        config=None,
+    ):
         if isinstance(default_backend, str):
             default_backend = [default_backend]
         for backend in default_backend:
             if backend == "tracking":
                 import warnings
 
-                warnings.warn("`tracking` logger is deprecated. use `wandb` instead.", DeprecationWarning, stacklevel=2)
+                warnings.warn(
+                    "`tracking` logger is deprecated. use `wandb` instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             else:
                 assert backend in self.supported_backend, f"{backend} is not supported"
 
@@ -66,7 +76,12 @@ class Tracking:
             settings = None
             if config and config["trainer"].get("wandb_proxy", None):
                 settings = wandb.Settings(https_proxy=config["trainer"]["wandb_proxy"])
-            wandb.init(project=project_name, name=experiment_name, config=config, settings=settings)
+            wandb.init(
+                project=project_name,
+                name=experiment_name,
+                config=config,
+                settings=settings,
+            )
             self.logger["wandb"] = wandb
 
         if "trackio" in default_backend:
@@ -80,13 +95,17 @@ class Tracking:
 
             import mlflow
 
-            MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:////tmp/mlruns.db")
+            MLFLOW_TRACKING_URI = os.environ.get(
+                "MLFLOW_TRACKING_URI", "sqlite:////tmp/mlruns.db"
+            )
             mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
             # Project_name is actually experiment_name in MLFlow
             # If experiment does not exist, will create a new experiment
             experiment = mlflow.set_experiment(project_name)
-            mlflow.start_run(experiment_id=experiment.experiment_id, run_name=experiment_name)
+            mlflow.start_run(
+                experiment_id=experiment.experiment_id, run_name=experiment_name
+            )
             mlflow.log_params(_compute_mlflow_params_from_objects(config))
             self.logger["mlflow"] = _MlflowLoggingAdapter()
 
@@ -99,7 +118,9 @@ class Tracking:
             SWANLAB_LOG_DIR = os.environ.get("SWANLAB_LOG_DIR", "swanlog")
             SWANLAB_MODE = os.environ.get("SWANLAB_MODE", "cloud")
             if SWANLAB_API_KEY:
-                swanlab.login(SWANLAB_API_KEY)  # NOTE: previous login information will be overwritten
+                swanlab.login(
+                    SWANLAB_API_KEY
+                )  # NOTE: previous login information will be overwritten
 
             if config is None:
                 config = {}  # make sure config is not None, otherwise **config will raise error
@@ -133,7 +154,9 @@ class Tracking:
             self.logger["vemlp_wandb"] = vemlp_wandb
 
         if "tensorboard" in default_backend:
-            self.logger["tensorboard"] = _TensorboardAdapter(project_name, experiment_name)
+            self.logger["tensorboard"] = _TensorboardAdapter(
+                project_name, experiment_name
+            )
 
         if "console" in default_backend:
             from verl.utils.logger import LocalLogger
@@ -142,7 +165,9 @@ class Tracking:
             self.logger["console"] = self.console_logger
 
         if "clearml" in default_backend:
-            self.logger["clearml"] = ClearMLLogger(project_name, experiment_name, config)
+            self.logger["clearml"] = ClearMLLogger(
+                project_name, experiment_name, config
+            )
 
         if "file" in default_backend:
             self.logger["file"] = FileLogger(project_name, experiment_name)
@@ -249,7 +274,9 @@ class _TensorboardAdapter:
 
         from torch.utils.tensorboard import SummaryWriter
 
-        tensorboard_dir = os.environ.get("TENSORBOARD_DIR", f"tensorboard_log/{project_name}/{experiment_name}")
+        tensorboard_dir = os.environ.get(
+            "TENSORBOARD_DIR", f"tensorboard_log/{project_name}/{experiment_name}"
+        )
         os.makedirs(tensorboard_dir, exist_ok=True)
         print(f"Saving tensorboard log to {tensorboard_dir}.")
         self.writer = SummaryWriter(tensorboard_dir)
@@ -274,11 +301,17 @@ def _compute_mlflow_params_from_objects(params) -> dict[str, Any]:
     if params is None:
         return {}
 
-    return _flatten_dict(_transform_params_to_json_serializable(params, convert_list_to_dict=True), sep="/")
+    return _flatten_dict(
+        _transform_params_to_json_serializable(params, convert_list_to_dict=True),
+        sep="/",
+    )
 
 
 def _transform_params_to_json_serializable(x, convert_list_to_dict: bool):
-    _transform = partial(_transform_params_to_json_serializable, convert_list_to_dict=convert_list_to_dict)
+    _transform = partial(
+        _transform_params_to_json_serializable,
+        convert_list_to_dict=convert_list_to_dict,
+    )
 
     if dataclasses.is_dataclass(x):
         return _transform(dataclasses.asdict(x))
@@ -286,7 +319,9 @@ def _transform_params_to_json_serializable(x, convert_list_to_dict: bool):
         return {k: _transform(v) for k, v in x.items()}
     if isinstance(x, list):
         if convert_list_to_dict:
-            return {"list_len": len(x)} | {f"{i}": _transform(v) for i, v in enumerate(x)}
+            return {"list_len": len(x)} | {
+                f"{i}": _transform(v) for i, v in enumerate(x)
+            }
         else:
             return [_transform(v) for v in x]
     if isinstance(x, Path):
@@ -341,7 +376,11 @@ class ValidationGenerationsLogger:
 
         # Create column names for all samples
         columns = ["step"] + sum(
-            [[f"input_{i + 1}", f"output_{i + 1}", f"score_{i + 1}"] for i in range(len(samples))], []
+            [
+                [f"input_{i + 1}", f"output_{i + 1}", f"score_{i + 1}"]
+                for i in range(len(samples))
+            ],
+            [],
         )
 
         if not hasattr(self, "validation_table"):
@@ -399,7 +438,9 @@ class ValidationGenerationsLogger:
                     json.dump(row_data, file)
                 mlflow.log_artifact(validation_gen_step_file)
         except Exception as e:
-            print(f"WARNING: save validation generation file to mlflow failed with error {e}")
+            print(
+                f"WARNING: save validation generation file to mlflow failed with error {e}"
+            )
 
     def log_generations_to_clearml(self, samples, step):
         """Log validation generation to clearml as table"""
@@ -437,7 +478,9 @@ class ValidationGenerationsLogger:
 
             # Use the same directory structure as _TensorboardAdapter
             if self.project_name and self.experiment_name:
-                default_dir = os.path.join("tensorboard_log", self.project_name, self.experiment_name)
+                default_dir = os.path.join(
+                    "tensorboard_log", self.project_name, self.experiment_name
+                )
             else:
                 default_dir = "tensorboard_log"
 
@@ -471,7 +514,7 @@ class ValidationGenerationsLogger:
 
     def log_multiturn_generations(self, loggers, multiturn_data, step, phase="val"):
         """Log multi-turn conversation data with tool responses and images.
-        
+
         Args:
             loggers: List of logger names to use
             multiturn_data: List of dicts, each containing:
@@ -489,10 +532,10 @@ class ValidationGenerationsLogger:
 
     def _log_multiturn_to_wandb(self, multiturn_data, step, phase="val"):
         """Log multi-turn conversations to wandb as a detailed table.
-        
+
         Creates a table where each row represents a conversation turn, allowing
         users to see the full flow of user → assistant → tool → assistant interactions.
-        
+
         Args:
             multiturn_data: List of conversation data
             step: Current training step
@@ -501,17 +544,30 @@ class ValidationGenerationsLogger:
         import wandb
 
         # Create table columns - added tool_name, original_image, cropped_image and reward components
-        columns = ["step", "sample_id", "turn_num", "role", "content", "tool_name", "original_image", "cropped_image", "tool_reward", "score", "bbox_iou", "acc_reward"]
-        
+        columns = [
+            "step",
+            "sample_id",
+            "turn_num",
+            "role",
+            "content",
+            "tool_name",
+            "original_image",
+            "cropped_image",
+            "tool_reward",
+            "score",
+            "bbox_iou",
+            "acc_reward",
+        ]
+
         # Use different table instances for train and val
         table_attr_name = f"multiturn_table_{phase}"
         if not hasattr(self, table_attr_name):
             setattr(self, table_attr_name, wandb.Table(columns=columns))
-        
+
         # Create new table with existing data
         existing_table = getattr(self, table_attr_name)
         new_table = wandb.Table(columns=columns, data=existing_table.data)
-        
+
         # Process each sample's multi-turn conversation
         for sample_idx, sample_data in enumerate(multiturn_data):
             # Support both formats: conversation_history (from training) and messages (from validation)
@@ -521,44 +577,53 @@ class ValidationGenerationsLogger:
             bbox_iou = sample_data.get("bbox_iou", None)
             score = sample_data.get("score", None)
             uid = sample_data.get("uid", f"sample_{sample_idx}")
-            
+
             # If conversation_history is available (training rollout), use it
             if conversation_history:
-                print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
+                # print(f"[DEBUG] Processing conversation_history with {len(conversation_history)} entries for sample {uid}")
                 for turn_num, turn_data in enumerate(conversation_history):
                     role = turn_data.get("role", "unknown")
                     content = turn_data.get("content", "")
                     tool_name = turn_data.get("tool_name", "")
                     tool_reward = sample_data.get("tool_reward", None)
                     tool_success = turn_data.get("tool_success", True)
-                    
+
                     # Truncate long content for readability
                     if len(content) > 500:
                         content_display = content[:497] + "..."
                     else:
                         content_display = content
-                    
+
                     # Get original and cropped images for tool responses
                     original_image = turn_data.get("original_image", None)
                     cropped_images = turn_data.get("cropped_images", [])
-                    
+
                     # print(f"[DEBUG] Turn {turn_num}: role={role}, has_original_image={original_image is not None}, "
                     #       f"original_image_type={type(original_image)}, has_cropped_images={len(cropped_images) > 0}, "
                     #       f"cropped_images_count={len(cropped_images)}")
-                    
+
                     # Process original image
                     original_image_obj = None
                     if role == "tool" and original_image is not None:
-                        print(f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
-                              f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}")
+                        print(
+                            f"[DEBUG] Converting original_image to wandb.Image: type={type(original_image)}, "
+                            f"is_PIL={hasattr(original_image, 'size')}, size={getattr(original_image, 'size', None)}"
+                        )
                         try:
-                            original_image_obj = wandb.Image(original_image, caption=f"Original - {tool_name}")
-                            print(f"[DEBUG] Successfully converted original_image to wandb.Image")
+                            original_image_obj = wandb.Image(
+                                original_image, caption=f"Original - {tool_name}"
+                            )
+                            print(
+                                f"[DEBUG] Successfully converted original_image to wandb.Image"
+                            )
                         except Exception as e:
-                            print(f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}")
+                            print(
+                                f"[DEBUG] ERROR: Failed to convert original image to wandb.Image: {e}"
+                            )
                             import traceback
+
                             traceback.print_exc()
-                    
+
                     # Process cropped images
                     cropped_image_obj = None
                     if role == "tool" and cropped_images:
@@ -566,80 +631,114 @@ class ValidationGenerationsLogger:
                             # Create a wandb Image from the first cropped image
                             # If multiple images, we could create a caption or montage
                             if len(cropped_images) == 1:
-                                cropped_image_obj = wandb.Image(cropped_images[0], caption=f"Cropped - {tool_name}: {content_display[:100]}")
+                                cropped_image_obj = wandb.Image(
+                                    cropped_images[0],
+                                    caption=f"Cropped - {tool_name}: {content_display[:100]}",
+                                )
                             else:
                                 # For multiple images, create a grid or log them separately
                                 import numpy as np
                                 from PIL import Image
+
                                 # Create a simple horizontal concatenation
                                 try:
-                                    widths, heights = zip(*(i.size for i in cropped_images))
+                                    widths, heights = zip(
+                                        *(i.size for i in cropped_images)
+                                    )
                                     total_width = sum(widths)
                                     max_height = max(heights)
-                                    new_im = Image.new('RGB', (total_width, max_height))
+                                    new_im = Image.new("RGB", (total_width, max_height))
                                     x_offset = 0
                                     for im in cropped_images:
                                         new_im.paste(im, (x_offset, 0))
                                         x_offset += im.width
-                                    cropped_image_obj = wandb.Image(new_im, caption=f"Cropped - {tool_name}: {len(cropped_images)} images")
+                                    cropped_image_obj = wandb.Image(
+                                        new_im,
+                                        caption=f"Cropped - {tool_name}: {len(cropped_images)} images",
+                                    )
                                 except Exception as e:
                                     # Fallback to first image
-                                    cropped_image_obj = wandb.Image(cropped_images[0], caption=f"Cropped - {tool_name}: {len(cropped_images)} images")
+                                    cropped_image_obj = wandb.Image(
+                                        cropped_images[0],
+                                        caption=f"Cropped - {tool_name}: {len(cropped_images)} images",
+                                    )
                         except Exception as e:
-                            print(f"Warning: Failed to convert cropped image to wandb.Image: {e}")
-                    
+                            print(
+                                f"Warning: Failed to convert cropped image to wandb.Image: {e}"
+                            )
+
                     # Add score only on the last turn
-                    turn_score = score if turn_num == len(conversation_history) - 1 else None
-                    
+                    turn_score = (
+                        score if turn_num == len(conversation_history) - 1 else None
+                    )
+
                     # Add row to table
                     # print(f"[DEBUG] Adding row to table: turn={turn_num}, role={role}, "
                     #       f"has_original_image_obj={original_image_obj is not None}, "
                     #       f"has_cropped_image_obj={cropped_image_obj is not None}")
-                    
+
                     # Add reward components only on the last turn
-                    turn_bbox_iou = bbox_iou if turn_num == len(conversation_history) - 1 else None
-                    turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(conversation_history) - 1 else None
-                    
+                    turn_bbox_iou = (
+                        bbox_iou if turn_num == len(conversation_history) - 1 else None
+                    )
+                    turn_acc_reward = (
+                        sample_data.get("acc_reward", None)
+                        if turn_num == len(conversation_history) - 1
+                        else None
+                    )
+
                     new_table.add_data(
-                        step, 
+                        step,
                         str(uid)[:12],  # Truncate uid for readability
-                        turn_num, 
-                        role, 
-                        content_display, 
+                        turn_num,
+                        role,
+                        content_display,
                         tool_name if tool_name else None,  # Use None instead of ""
                         original_image_obj,  # Original image before tool processing
-                        cropped_image_obj,   # Cropped/processed image after tool
-                        tool_reward if tool_reward is not None else None,  # Use None instead of ""
+                        cropped_image_obj,  # Cropped/processed image after tool
+                        tool_reward
+                        if tool_reward is not None
+                        else None,  # Use None instead of ""
                         turn_score,
                         turn_bbox_iou,  # bbox_iou
                         turn_acc_reward,  # acc_reward
                     )
-            
+
             # Otherwise use messages format (validation)
             elif messages:
                 # Get images if available from multi_modal_inputs
-                images = multi_modal_inputs.get("image", []) if multi_modal_inputs else []
+                images = (
+                    multi_modal_inputs.get("image", []) if multi_modal_inputs else []
+                )
                 image_idx = 0
-                
+
                 # Process each turn in the conversation
                 for turn_num, message in enumerate(messages):
                     role = message.get("role", "unknown")
                     content = message.get("content", "")
-                    
+
                     # Format content for display
                     if isinstance(content, list):
                         # Multi-modal content (e.g., [{"type": "image"}, {"type": "text", "text": "..."}])
-                        text_parts = [item.get("text", "") for item in content if isinstance(item, dict) and item.get("type") == "text"]
-                        content_str = " ".join(text_parts) if text_parts else "[multimodal content]"
+                        text_parts = [
+                            item.get("text", "")
+                            for item in content
+                            if isinstance(item, dict) and item.get("type") == "text"
+                        ]
+                        content_str = (
+                            " ".join(text_parts)
+                            if text_parts
+                            else "[multimodal content]"
+                        )
                     elif isinstance(content, dict):
                         content_str = str(content)
                     else:
                         content_str = str(content)
-                    
+
                     # Truncate long content for readability
                     if len(content_str) > 500:
                         content_str = content_str[:497] + "..."
-                    
+
                     # Get associated image for tool responses
                     image_obj = None
                     if role == "tool" and images and image_idx < len(images):
@@ -648,22 +747,28 @@ class ValidationGenerationsLogger:
                             image_obj = wandb.Image(images[image_idx])
                             image_idx += 1
                         except Exception as e:
-                            print(f"Warning: Failed to convert image to wandb.Image: {e}")
-                    
+                            print(
+                                f"Warning: Failed to convert image to wandb.Image: {e}"
+                            )
+
                     # Add score only on the last turn
                     turn_score = score if turn_num == len(messages) - 1 else None
-                    
+
                     # Add reward components only on the last turn
                     turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else None
-                    turn_acc_reward = sample_data.get("acc_reward", None) if turn_num == len(messages) - 1 else None
-                    
+                    turn_acc_reward = (
+                        sample_data.get("acc_reward", None)
+                        if turn_num == len(messages) - 1
+                        else None
+                    )
+
                     # Add row to table
                     new_table.add_data(
-                        step, 
+                        step,
                         str(uid)[:12] if uid else f"sample_{sample_idx}",
-                        turn_num, 
-                        role, 
-                        content_str, 
+                        turn_num,
+                        role,
+                        content_str,
                         None,  # tool_name - use None instead of ""
                         None,  # original_image - not available in legacy format
                         image_obj,  # cropped_image (or tool result image)
@@ -672,7 +777,7 @@ class ValidationGenerationsLogger:
                         turn_bbox_iou,  # bbox_iou
                         turn_acc_reward,  # acc_reward
                     )
-        
+
         # Log the table with phase-specific name
         table_name = f"{phase}/multiturn_generations"
         wandb.log({table_name: new_table}, step=step)
@@ -680,48 +785,74 @@ class ValidationGenerationsLogger:
 
     def _log_multiturn_to_swanlab(self, multiturn_data, step, phase="val"):
         """Log multi-turn conversations to swanlab as a table.
-        
+
         Args:
             multiturn_data: List of conversation data
             step: Current training step
             phase: "train" or "val" to use different tables
         """
         import swanlab
-        
+
         swanlab_table = swanlab.echarts.Table()
-        headers = ["step", "sample_id", "turn_num", "role", "content", "score", "bbox_iou", "acc_reward"]
-        
+        headers = [
+            "step",
+            "sample_id",
+            "turn_num",
+            "role",
+            "content",
+            "score",
+            "bbox_iou",
+            "acc_reward",
+        ]
+
         rows = []
         for sample_idx, sample_data in enumerate(multiturn_data):
             messages = sample_data.get("messages", [])
             score = sample_data.get("score", None)
             bbox_iou = sample_data.get("bbox_iou", None)
             acc_reward = sample_data.get("acc_reward", None)
-            
+
             for turn_num, message in enumerate(messages):
                 role = message.get("role", "unknown")
                 content = message.get("content", "")
-                
+
                 # Format content
                 if isinstance(content, list):
-                    text_parts = [item.get("text", "") for item in content if isinstance(item, dict) and item.get("type") == "text"]
-                    content_str = " ".join(text_parts) if text_parts else "[multimodal content]"
+                    text_parts = [
+                        item.get("text", "")
+                        for item in content
+                        if isinstance(item, dict) and item.get("type") == "text"
+                    ]
+                    content_str = (
+                        " ".join(text_parts) if text_parts else "[multimodal content]"
+                    )
                 elif isinstance(content, dict):
                     content_str = str(content)
                 else:
                     content_str = str(content)
-                
+
                 # Truncate long content
                 if len(content_str) > 300:
                     content_str = content_str[:297] + "..."
-                
+
                 # Add score and reward components only on last turn
                 turn_score = score if turn_num == len(messages) - 1 else ""
                 turn_bbox_iou = bbox_iou if turn_num == len(messages) - 1 else ""
                 turn_acc_reward = acc_reward if turn_num == len(messages) - 1 else ""
-                
-                rows.append([step, sample_idx, turn_num, role, content_str, turn_score, turn_bbox_iou, turn_acc_reward])
-        
+
+                rows.append(
+                    [
+                        step,
+                        sample_idx,
+                        turn_num,
+                        role,
+                        content_str,
+                        turn_score,
+                        turn_bbox_iou,
+                        turn_acc_reward,
+                    ]
+                )
+
         swanlab_table.add(headers=headers, rows=rows)
         table_name = f"{phase}/multiturn_generations"
         swanlab.log({table_name: swanlab_table}, step=step)

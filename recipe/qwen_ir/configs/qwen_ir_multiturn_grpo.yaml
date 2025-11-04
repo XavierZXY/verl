@@ -28,5 +28,5 @@ actor_rollout_ref:
       tool_config_path: "recipe/deepeyes/config/image_zoom_in_tool_config.yaml"
 
 custom_reward_function:
-  path: "recipe/deepeyes/deepeyes.py"
+  path: "recipe/qwen_ir/qwen_ir.py"
   name: compute_score

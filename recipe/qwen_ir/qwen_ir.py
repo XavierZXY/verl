@@ -52,11 +52,11 @@ SYSTEM_PROMPT: str = (
 )
 
 USER_PROMPT: list[str] = [
-    "Please analyze the following image and identify all degradation types present. Return the degradation type(s) in the format specified below.",
-    "Analyze the image and identify all degradation types present.",
-    "What are the degradation types present in the image?",
-    "Can you identify the degradation types present in the image?",
-    "Analyze the image and identify all degradation types present. Return the degradation type(s) in the format specified below.",
+    "<image>.\nPlease analyze the following image and identify all degradation types present. Return the degradation type(s) in the format specified below.",
+    "<image>.\nAnalyze the image and identify all degradation types present.",
+    "<image>.\nWhat are the degradation types present in the image?",
+    "<image>.\nCan you identify the degradation types present in the image?",
+    "<image>.\nAnalyze the image and identify all degradation types present. Return the degradation type(s) in the format specified below.",
 ]
 openai_api_key = "EMPTY"
 openai_api_base = os.environ.get("LLM_AS_A_JUDGE_BASE", "http://10.1.100.71:18901/v1")
@@ -93,14 +93,6 @@ class CustomRLHFDataset(RLHFDataset):
         """
         row_dict: dict = self.dataframe[item]
 
-        # Extract images
-        images = None
-        row_dict_images = row_dict.get(self.image_key, None)
-        if row_dict_images:
-            images = [
-                Image.open(io.BytesIO(image["bytes"])) for image in row_dict_images
-            ]
-
         # Extract env_name (degradation types)
         env_name = row_dict.get("env_name", "")
 
@@ -125,7 +117,13 @@ class CustomRLHFDataset(RLHFDataset):
             )
             multi_modal_data = {}
 
-            if images:
+            images = None
+            row_dict_images = row_dict.pop(self.image_key, None)
+            if row_dict_images:
+                images = [
+                    Image.open(io.BytesIO(image["bytes"])) for image in row_dict_images
+                ]
+
                 # due to the image key is "image" instead of "images" in vllm, we need to use "image" here
                 # link: https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205  # noqa: E501
                 multi_modal_data["image"] = images
@@ -137,8 +135,7 @@ class CustomRLHFDataset(RLHFDataset):
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
 
-            if "second_per_grid_ts" in model_inputs:
-                model_inputs.pop("second_per_grid_ts")
+            # Don't pop second_per_grid_ts here - we need it for get_rope_index later
 
             # There's a trap here, multi_modal_inputs has to be a dict, not BatchFeature
             row_dict["multi_modal_data"] = multi_modal_data
@@ -227,6 +224,7 @@ class CustomRLHFDataset(RLHFDataset):
         # add index for each prompt
         index = row_dict.get("extra_info", {}).get("index", 0)
         row_dict["index"] = index
+        row_dict["agent_name"] = "tool_agent"
 
         return row_dict
 
@@ -323,7 +321,7 @@ def compute_score(
             if env_name_normalized and env_name_normalized != "null":
                 gt_list = [t.strip() for t in env_name_normalized.split(",")]
 
-        print(f"gt_list: {gt_list}")
+        # print(f"gt_list: {gt_list}")
 
         # Now convert the list to a normalized set (lowercase, no empty strings)
         gt_types = set([str(item).strip().lower() for item in gt_list if item])
@@ -339,15 +337,28 @@ def compute_score(
             intersection = pred_types & gt_types
             union = pred_types | gt_types
             if len(union) > 0:
-                acc_reward = len(intersection) / len(union)
+                acc_reward = float(len(intersection)) / float(len(union))
             else:
                 acc_reward = 0.0
     else:
         acc_reward = 0.0
 
+    # 3. Check length limit: if <think> or <answer> content exceeds 512, set acc_reward to 0
+    reasoning_text = ""
+    reasoning_match = re.search(r"<think>(.*?)</think>", solution_str, re.DOTALL)
+    if reasoning_match:
+        reasoning_text = reasoning_match.group(1).strip()
+
+    if len(reasoning_text) > 2048 or len(answer_text) > 120:
+        acc_reward = 0.0
+        logger.debug(
+            f"Length exceeded: reasoning_len={len(reasoning_text)}, "
+            f"answer_len={len(answer_text)}. Setting acc_reward to 0."
+        )
+
     # Final score calculation
     # Weighted combination: format (0.5), acc (0.5)
-    final_score = 0.5 * format_reward + 0.5 * acc_reward
+    final_score = 0.2 * format_reward + 0.8 * acc_reward
 
     # Log for debugging
     logger.debug(
